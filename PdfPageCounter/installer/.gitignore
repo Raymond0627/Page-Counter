@@ -1,0 +1,12 @@
+# Build artifacts produced by build-installer.ps1.
+# setup.iss and build-installer.ps1 are source and stay tracked.
+
+# Self-contained publish output (~239 MB)
+staging/
+
+# Windows App Runtime redistributable copied out of the NuGet cache (~44 MB)
+redist/
+
+# Compiled installers
+output/
+*.exe

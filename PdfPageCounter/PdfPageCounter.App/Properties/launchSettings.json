@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Lumeed Pcount (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "Lumeed Pcount (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

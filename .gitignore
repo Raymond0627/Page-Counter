@@ -1,0 +1,103 @@
+# ---------------------------------------------------------------------------
+#  Page Counter - repository-wide ignore rules
+#  Repo root: "Pdf page counter"  |  solution: PdfPageCounter\PdfPageCounter.sln
+# ---------------------------------------------------------------------------
+
+# --- Visual Studio / IDE ---------------------------------------------------
+.vs/
+.idea/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.DotSettings.user
+*.dotCover
+_ReSharper*/
+
+# --- .NET build output -----------------------------------------------------
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+Generated\ Files/
+*_wpftmp.csproj
+[Bb]uild[Ll]og.*
+*.binlog
+
+# --- Logs and test output --------------------------------------------------
+[Ll]og/
+[Ll]ogs/
+*.log
+[Tt]est[Rr]esult*/
+[Tt]est[Rr]esults/
+*.trx
+*.coverage
+*.coveragexml
+*.coverage.data
+*.coverage.json
+
+# --- NuGet -----------------------------------------------------------------
+*.nupkg
+*.snupkg
+*.nuget.props
+*.nuget.targets
+project.lock.json
+packages/
+!packages/build/
+
+# --- MSIX / packaging output ----------------------------------------------
+AppPackages/
+BundleArtifacts/
+*.msix
+*.msixupload
+*.appx
+*.appxbundle
+*.appxupload
+*.msixbundle
+
+# --- Installer pipeline output (build-installer.ps1) -----------------------
+# Self-contained publish output is ~239 MB, the App Runtime redist ~44 MB.
+PdfPageCounter/installer/staging/
+PdfPageCounter/installer/redist/
+PdfPageCounter/installer/output/
+*.exe
+
+# --- Python (tools\generate-icon.py) ---------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Secrets / machine-local config ---------------------------------------
+.env
+.env.*
+!.env.example
+appsettings.Development.json
+*.pfx
+*.snk
+*.key
+*.pem
+*.pubxml.user
+*.publishsettings
+
+# --- OS cruft --------------------------------------------------------------
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# --- Inno Setup runtime probe files ---------------------------------------
+# Emitted into the working directory when a built installer is launched.
+# Each contains a temp path and nothing of value.
+hello-ansi
+hello-string
+written-by-inno
+RuntimePresent = FALSE
+OK
