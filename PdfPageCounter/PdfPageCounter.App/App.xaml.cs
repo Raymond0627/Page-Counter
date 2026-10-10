@@ -10,6 +10,7 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using Microsoft.UI.Xaml.Shapes;
+using PdfPageCounter_App.Services;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -25,6 +26,9 @@ public partial class App : Application
 
     /// <summary>The main application window, used for WinRT interop (e.g. folder pickers).</summary>
     public static Window? MainAppWindow { get; private set; }
+
+    /// <summary>Application-wide theme manager.</summary>
+    public static ThemeService ThemeManager { get; } = new(new SettingsStore());
     
     /// <summary>
     /// Initializes the singleton application object.  This is the first line of authored code

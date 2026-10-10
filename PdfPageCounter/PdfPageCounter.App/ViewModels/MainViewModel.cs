@@ -16,7 +16,6 @@ public sealed partial class MainViewModel : ObservableObject
 
     private CancellationTokenSource? _cts;
     private DispatcherQueueTimer? _refreshTimer;
-    private DispatcherQueueTimer? _treeSyncTimer;
 
     // UI-thread snapshot counters produced by the periodic timer.
     private long _displayTotalFiles;
@@ -251,12 +250,6 @@ public sealed partial class MainViewModel : ObservableObject
         _refreshTimer.IsRepeating = true;
         _refreshTimer.Tick += (_, _) => RefreshLiveCounters();
         _refreshTimer.Start();
-
-        _treeSyncTimer = _dispatcher.CreateTimer();
-        _treeSyncTimer.Interval = TimeSpan.FromMilliseconds(500);
-        _treeSyncTimer.IsRepeating = true;
-        _treeSyncTimer.Tick += (_, _) => SyncTreeFromModel();
-        _treeSyncTimer.Start();
     }
 
     private void StopTimers()
@@ -265,11 +258,6 @@ public sealed partial class MainViewModel : ObservableObject
         {
             _refreshTimer.Stop();
             _refreshTimer = null;
-        }
-        if (_treeSyncTimer != null)
-        {
-            _treeSyncTimer.Stop();
-            _treeSyncTimer = null;
         }
     }
 
@@ -348,54 +336,6 @@ public sealed partial class MainViewModel : ObservableObject
         }
         vm.RefreshLabel();
         return vm;
-    }
-
-    private void SyncTreeFromModel()
-    {
-        if (_rootModel == null)
-        {
-            return;
-        }
-
-        if (TreeRoots.Count == 0)
-        {
-            BuildTreeFromModel(_rootModel);
-            return;
-        }
-
-        var rootVm = TreeRoots[0];
-        Reconcile(rootVm, _rootModel);
-        rootVm.RefreshLabel();
-    }
-
-    private void Reconcile(FolderNodeViewModel vm, FolderNode node)
-    {
-        var existing = vm.Children.Select(c => c.FullPath).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        foreach (var childNode in node.Children)
-        {
-            if (!existing.Contains(childNode.FullPath))
-            {
-                vm.Children.Insert(GetInsertIndex(vm.Children, childNode), BuildBranch(childNode));
-            }
-            else
-            {
-                var childVm = vm.Children.First(c => string.Equals(c.FullPath, childNode.FullPath, StringComparison.OrdinalIgnoreCase));
-                Reconcile(childVm, childNode);
-            }
-        }
-        vm.RefreshLabel();
-    }
-
-    private static int GetInsertIndex(ObservableCollection<FolderNodeViewModel> list, FolderNode node)
-    {
-        for (int i = 0; i < list.Count; i++)
-        {
-            if (string.Compare(list[i].Name, node.Name, StringComparison.OrdinalIgnoreCase) > 0)
-            {
-                return i;
-            }
-        }
-        return list.Count;
     }
 
     // ---------------- Helpers ----------------
