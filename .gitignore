@@ -101,3 +101,7 @@ hello-string
 written-by-inno
 RuntimePresent = FALSE
 OK
+
+# --- Superpowers SDD scratch (ledger, review packages) ---------------------
+.superpowers/
+
