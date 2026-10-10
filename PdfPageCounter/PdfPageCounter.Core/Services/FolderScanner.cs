@@ -222,7 +222,7 @@ public sealed class FolderScanner
 
     private static void AttachToFolder(PdfFileRecord record, ConcurrentDictionary<string, FolderNode> folderByPath)
     {
-        var parentKey = record.ParentFolderPath.TrimEnd('\\');
+        var parentKey = (Path.GetDirectoryName(record.FullPath) ?? string.Empty).TrimEnd('\\');
         if (parentKey.Length > 0 && folderByPath.TryGetValue(parentKey, out var folder))
         {
             lock (folder.Files)
@@ -238,7 +238,6 @@ public sealed class FolderScanner
         {
             Name = Path.GetFileName(file),
             FullPath = file,
-            ParentFolderPath = Path.GetDirectoryName(file) ?? string.Empty,
         };
 
         var (pageCount, error) = _pageCounter.TryGetPageCount(file);

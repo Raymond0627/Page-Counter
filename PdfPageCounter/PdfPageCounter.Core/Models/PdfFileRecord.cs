@@ -15,6 +15,4 @@ public sealed class PdfFileRecord
     public bool IsDuplicate { get; set; }
 
     public long? DuplicateGroupId { get; set; }
-
-    public string ParentFolderPath { get; set; } = string.Empty;
 }

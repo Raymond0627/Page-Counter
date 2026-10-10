@@ -48,16 +48,16 @@ public class FolderScannerTests : IDisposable
         var root = await scanner.ScanAsync(_tempRoot, CancellationToken.None);
 
         // Root total = 3 + 2 + 5 = 10
-        Assert.Equal(10, root.TotalPageCount);
-        Assert.Equal(3, root.OwnPageCount);
+        Assert.Equal(10L, root.TotalPageCount);
+        Assert.Equal(3L, root.OwnPageCount);
 
         var sub = AssertSingle(root, "sub");
-        Assert.Equal(7, sub.TotalPageCount); // 2 + 5
-        Assert.Equal(2, sub.OwnPageCount);
+        Assert.Equal(7L, sub.TotalPageCount); // 2 + 5
+        Assert.Equal(2L, sub.OwnPageCount);
 
         var deep = AssertSingle(sub, "deep");
-        Assert.Equal(5, deep.TotalPageCount);
-        Assert.Equal(5, deep.OwnPageCount);
+        Assert.Equal(5L, deep.TotalPageCount);
+        Assert.Equal(5L, deep.OwnPageCount);
 
         Assert.Single(root.Files);   // only a.pdf is directly in root
         Assert.Single(sub.Files);    // only b.pdf is directly in sub
@@ -65,12 +65,12 @@ public class FolderScannerTests : IDisposable
 
         // File counts are a separate metric from page counts: 3 / 2 / 1 files
         // against 10 / 7 / 5 pages.
-        Assert.Equal(3, root.TotalFileCount);
-        Assert.Equal(2, sub.TotalFileCount);
-        Assert.Equal(1, deep.TotalFileCount);
-        Assert.Equal(1, root.OwnFileCount);
-        Assert.Equal(1, sub.OwnFileCount);
-        Assert.Equal(1, deep.OwnFileCount);
+        Assert.Equal(3L, root.TotalFileCount);
+        Assert.Equal(2L, sub.TotalFileCount);
+        Assert.Equal(1L, deep.TotalFileCount);
+        Assert.Equal(1L, root.OwnFileCount);
+        Assert.Equal(1L, sub.OwnFileCount);
+        Assert.Equal(1L, deep.OwnFileCount);
 
         // Guards against the two metrics ever being conflated again.
         Assert.NotEqual(root.TotalFileCount, root.TotalPageCount);
@@ -87,11 +87,11 @@ public class FolderScannerTests : IDisposable
         var scanner = CreateScanner(out _);
         var root = await scanner.ScanAsync(_tempRoot, CancellationToken.None);
 
-        Assert.Equal(2, root.TotalFileCount);
-        Assert.Equal(10, root.TotalPageCount);
+        Assert.Equal(2L, root.TotalFileCount);
+        Assert.Equal(10L, root.TotalPageCount);
 
         // A folder of single-page PDFs is the one case where the two legitimately match.
-        Assert.Equal(root.TotalFileCount, root.Files.Count);
+        Assert.Equal(root.TotalFileCount, (long)root.Files.Count);
     }
 
     [Fact]
@@ -104,9 +104,9 @@ public class FolderScannerTests : IDisposable
         var root = await scanner.ScanAsync(_tempRoot, CancellationToken.None);
 
         // "Total Files" means PDFs found, so the corrupt file is included.
-        Assert.Equal(2, root.TotalFileCount);
+        Assert.Equal(2L, root.TotalFileCount);
         // Only the readable PDF contributes pages.
-        Assert.Equal(3, root.TotalPageCount);
+        Assert.Equal(3L, root.TotalPageCount);
     }
 
     [Fact]
@@ -127,8 +127,8 @@ public class FolderScannerTests : IDisposable
         Assert.Single(right.Files, f => f.IsDuplicate);
 
         // Duplicate count counts all members (=2), unique total = 4.
-        Assert.Equal(2, detector.DuplicateFileCount());
-        Assert.Equal(4, detector.UniquePageTotal());
+        Assert.Equal(2L, detector.DuplicateFileCount());
+        Assert.Equal(4L, detector.UniquePageTotal());
     }
 
     [Fact]
@@ -142,8 +142,8 @@ public class FolderScannerTests : IDisposable
         var scanner = CreateScanner(out var detector);
         await scanner.ScanAsync(_tempRoot, CancellationToken.None);
 
-        Assert.Equal(0, detector.DuplicateFileCount());
-        Assert.Equal(13, detector.UniquePageTotal());
+        Assert.Equal(0L, detector.DuplicateFileCount());
+        Assert.Equal(13L, detector.UniquePageTotal());
     }
 
     [Fact]
@@ -164,8 +164,8 @@ public class FolderScannerTests : IDisposable
         Assert.Single(sub.Files, f => f.IsError);
 
         // Only the good file contributes pages.
-        Assert.Equal(2, sub.TotalPageCount);
-        Assert.Equal(1, root.ErrorFileCount);
+        Assert.Equal(2L, sub.TotalPageCount);
+        Assert.Equal(1L, root.ErrorFileCount);
     }
 
     [Fact]
@@ -179,7 +179,7 @@ public class FolderScannerTests : IDisposable
 
         var empty = AssertSingle(root, "empty");
         Assert.Single(empty.Files, f => f.IsError);
-        Assert.Equal(0, empty.TotalPageCount);
+        Assert.Equal(0L, empty.TotalPageCount);
     }
 
     [Fact]
@@ -215,8 +215,8 @@ public class FolderScannerTests : IDisposable
         var root = await scanner.ScanAsync(_tempRoot, CancellationToken.None);
 
         // "bad" is skipped; both good branches are still discovered.
-        Assert.Equal(2, root.TotalFileCount);
-        Assert.Equal(5, root.TotalPageCount);
+        Assert.Equal(2L, root.TotalFileCount);
+        Assert.Equal(5L, root.TotalPageCount);
         // "bad" remains a discovered node (it was listed as a child); only its
         // contents were skipped, so all three child folders are present.
         Assert.Equal(3, root.Children.Count);
@@ -232,7 +232,7 @@ public class FolderScannerTests : IDisposable
         var root = await scanner.ScanAsync(_tempRoot, CancellationToken.None);
 
         Assert.Single(root.Children);
-        Assert.Equal(0, root.TotalFileCount);
+        Assert.Equal(0L, root.TotalFileCount);
     }
 
     [Fact]
@@ -253,8 +253,8 @@ public class FolderScannerTests : IDisposable
         var node = root;
         for (int i = 0; i < 60; i++)
         {
-            Assert.Equal(1, node.TotalFileCount);
-            Assert.Equal(7, node.TotalPageCount);
+            Assert.Equal(1L, node.TotalFileCount);
+            Assert.Equal(7L, node.TotalPageCount);
             Assert.Single(node.Children);
             node = node.Children[0];
         }

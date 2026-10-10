@@ -16,22 +16,22 @@ public sealed class FolderNode
     /// Number of PDF files directly in this folder, including any that failed to
     /// parse. Counts files, not pages, so it tracks the folder's actual contents.
     /// </summary>
-    public int OwnFileCount { get; set; }
+    public long OwnFileCount { get; set; }
 
     /// <summary>OwnFileCount plus the rolled-up TotalFileCount of every descendant folder.</summary>
-    public int TotalFileCount { get; set; }
+    public long TotalFileCount { get; set; }
 
     /// <summary>Sum of pages for all successfully-parsed direct files in this folder (duplicates included).</summary>
-    public int OwnPageCount { get; set; }
+    public long OwnPageCount { get; set; }
 
     /// <summary>OwnPageCount plus the rolled-up TotalPageCount of every descendant folder.</summary>
-    public int TotalPageCount { get; set; }
+    public long TotalPageCount { get; set; }
 
     /// <summary>Number of duplicate files in this folder's subtree (direct + descendants).</summary>
-    public int DuplicateFileCount { get; set; }
+    public long DuplicateFileCount { get; set; }
 
     /// <summary>Number of files that failed to parse, in this folder's subtree.</summary>
-    public int ErrorFileCount { get; set; }
+    public long ErrorFileCount { get; set; }
 
     public FolderNode(string name, string fullPath)
     {
