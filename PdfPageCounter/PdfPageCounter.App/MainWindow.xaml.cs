@@ -23,5 +23,8 @@ public sealed partial class MainWindow : Window
 
         // Navigate the root frame to the main page on startup.
         RootFrame.Navigate(typeof(MainPage));
+
+        // Apply the persisted theme to the whole window on startup.
+        App.ThemeManager.ApplyTo((FrameworkElement)Content);
     }
 }
