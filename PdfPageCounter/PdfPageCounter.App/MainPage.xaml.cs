@@ -2,6 +2,7 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using PdfPageCounter_App.Services;
 using PdfPageCounter_App.ViewModels;
 using Windows.Storage.Pickers;
 using Windows.Storage;
@@ -18,6 +19,24 @@ public sealed partial class MainPage : Page
 
         _viewModel = new MainViewModel(DispatcherQueue.GetForCurrentThread());
         DataContext = _viewModel;
+
+        var current = App.ThemeManager.Current;
+        ThemeSystem.IsChecked = current == AppTheme.System;
+        ThemeLight.IsChecked = current == AppTheme.Light;
+        ThemeDark.IsChecked = current == AppTheme.Dark;
+    }
+
+    private void ThemeItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is RadioMenuFlyoutItem { Tag: string tag } &&
+            Enum.TryParse<AppTheme>(tag, out var theme))
+        {
+            App.ThemeManager.SetTheme(theme);
+            if (App.MainAppWindow?.Content is FrameworkElement root)
+            {
+                App.ThemeManager.ApplyTo(root);
+            }
+        }
     }
 
     private async void BrowseButton_Click(object sender, RoutedEventArgs e)

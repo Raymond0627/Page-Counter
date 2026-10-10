@@ -44,6 +44,15 @@
                             Command="{Binding CancelCommand}"
                             Visibility="{Binding Summary.IsScanning, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}" />
                     <ProgressRing IsActive="{Binding Summary.IsScanning}" Width="24" Height="24" />
+                    <DropDownButton x:Name="ThemeButton" Content="Theme" ToolTipService.ToolTip="Theme">
+                        <DropDownButton.Flyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                <RadioMenuFlyoutItem x:Name="ThemeSystem" Text="System" GroupName="Theme" Tag="System" Click="ThemeItem_Click" />
+                                <RadioMenuFlyoutItem x:Name="ThemeLight" Text="Light" GroupName="Theme" Tag="Light" Click="ThemeItem_Click" />
+                                <RadioMenuFlyoutItem x:Name="ThemeDark" Text="Dark" GroupName="Theme" Tag="Dark" Click="ThemeItem_Click" />
+                            </MenuFlyout>
+                        </DropDownButton.Flyout>
+                    </DropDownButton>
                 </StackPanel>
                 <TextBlock Text="{Binding CurrentRoot, FallbackValue='(no folder selected)'}"
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
