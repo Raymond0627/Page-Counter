@@ -53,15 +53,6 @@ public sealed class FolderNodeViewModel : INotifyPropertyChanged
         private set => SetField(ref _hasBadge, value);
     }
 
-    public void SyncFromModel()
-    {
-        // Keep the child collection in sync with the model (new children may
-        // have been discovered after this ViewModel was created).
-        // Simple approach: rebuild label only; children are added incrementally
-        // by the MainViewModel during the scan.
-        RefreshLabel();
-    }
-
     public void RefreshLabel()
     {
         DisplayLabel = $"{_node.Name} — {_node.OwnPageCount} pages (own) / {_node.TotalPageCount} pages (total)";

@@ -16,6 +16,12 @@ public sealed class AppSettings
 /// </summary>
 public sealed class SettingsStore
 {
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        WriteIndented = true,
+    };
+
     private static readonly string DefaultPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "LumeedPcount", "settings.json");
@@ -30,7 +36,7 @@ public sealed class SettingsStore
         {
             if (File.Exists(_filePath))
             {
-                return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(_filePath))
+                return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(_filePath), JsonOptions)
                        ?? new AppSettings();
             }
         }
@@ -46,7 +52,7 @@ public sealed class SettingsStore
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(_filePath)!);
-            File.WriteAllText(_filePath, JsonSerializer.Serialize(settings));
+            File.WriteAllText(_filePath, JsonSerializer.Serialize(settings, JsonOptions));
         }
         catch
         {

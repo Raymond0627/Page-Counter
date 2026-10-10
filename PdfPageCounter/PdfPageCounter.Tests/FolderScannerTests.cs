@@ -225,6 +225,10 @@ public class FolderScannerTests : IDisposable
     [Fact]
     public async Task Scan_SelfReferentialDirectory_TerminatesWithSingleNode()
     {
+        // The "loop" directory exists (so it is not treated as a reparse point),
+        // but the lister reports it as its own child, simulating a self-cycle.
+        Directory.CreateDirectory(Path.Combine(_tempRoot, "loop"));
+
         var detector = new DuplicateDetector();
         var scanner = new FolderScanner(new PdfPageCounterService(), detector,
             lister: new SelfReferentialLister(_tempRoot));
@@ -233,6 +237,68 @@ public class FolderScannerTests : IDisposable
 
         Assert.Single(root.Children);
         Assert.Equal(0L, root.TotalFileCount);
+    }
+
+    [Fact]
+    public async Task Scan_UnreadableDirectoryAttributes_SkipsClosedAndReports()
+    {
+        // The lister reports a child path that does not exist on disk, so its
+        // attributes cannot be read. The scanner must fail closed (skip it) and
+        // report it, rather than traverse an unidentifiable directory.
+        var skipped = new List<string>();
+        var detector = new DuplicateDetector();
+        var scanner = new FolderScanner(new PdfPageCounterService(), detector,
+            lister: new GhostChildLister(_tempRoot));
+        scanner.FolderSkipped += (dir, _) => { lock (skipped) skipped.Add(dir); };
+
+        var root = await scanner.ScanAsync(_tempRoot, CancellationToken.None);
+
+        Assert.Empty(root.Children);
+        Assert.Equal(0L, root.TotalFileCount);
+        Assert.Single(skipped);
+    }
+
+    [Fact]
+    public async Task Scan_JunctionDirectory_IsSkippedReportedAndNotDoubleCounted()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var real = Path.Combine(_tempRoot, "real");
+        Directory.CreateDirectory(real);
+        CreatePdf(Path.Combine(real, "p.pdf"), 2);
+
+        var link = Path.Combine(_tempRoot, "link");
+        var psi = new System.Diagnostics.ProcessStartInfo("cmd.exe", $"/c mklink /J \"{link}\" \"{real}\"")
+        {
+            CreateNoWindow = true,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        using (var proc = System.Diagnostics.Process.Start(psi)!)
+        {
+            proc.WaitForExit();
+            if (proc.ExitCode != 0)
+            {
+                return; // junction creation unavailable in this environment
+            }
+        }
+
+        var skipped = new List<string>();
+        var scanner = new FolderScanner(new PdfPageCounterService(), new DuplicateDetector());
+        scanner.FolderSkipped += (dir, _) => { lock (skipped) skipped.Add(dir); };
+
+        var root = await scanner.ScanAsync(_tempRoot, CancellationToken.None);
+
+        // The real folder's single PDF is counted once; the junction is not
+        // traversed (so nothing is double-counted) and is reported as skipped.
+        Assert.Equal(1L, root.TotalFileCount);
+        Assert.Equal(2L, root.TotalPageCount);
+        Assert.Single(root.Children);
+        Assert.Contains(skipped, s => s.EndsWith("link", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -303,5 +369,16 @@ public class FolderScannerTests : IDisposable
             var child = Path.Combine(_root, "loop");
             return new(new[] { child }, Array.Empty<string>());
         }
+    }
+
+    private sealed class GhostChildLister : IDirectoryLister
+    {
+        private readonly string _root;
+
+        public GhostChildLister(string root) => _root = root;
+
+        // Reports a child directory that does not exist on disk.
+        public DirectoryListing List(string directory) =>
+            new(new[] { Path.Combine(_root, "ghost") }, Array.Empty<string>());
     }
 }

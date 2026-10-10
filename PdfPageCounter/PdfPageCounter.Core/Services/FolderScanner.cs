@@ -175,6 +175,7 @@ public sealed class FolderScanner
 
                     if (IsReparsePoint(sub))
                     {
+                        FolderSkipped?.Invoke(sub, "Skipped reparse point (junction/symlink).");
                         continue;
                     }
 
@@ -298,7 +299,10 @@ public sealed class FolderScanner
         }
         catch
         {
-            return false;
+            // Fail closed: if attributes cannot be read we cannot rule out a
+            // junction/symlink, so treat the directory as a reparse point and
+            // skip it rather than risk an unbounded traversal.
+            return true;
         }
     }
 
