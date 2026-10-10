@@ -18,6 +18,7 @@ public sealed class FolderScanner
     private readonly PdfPageCounterService _pageCounter;
     private readonly DuplicateDetector _duplicateDetector;
     private readonly int _channelCapacity;
+    private readonly IDirectoryLister _lister;
 
     // Emitted as files are processed, so the UI can update incrementally.
     public event Action<PdfFileRecord>? FileProcessed;
@@ -32,16 +33,16 @@ public sealed class FolderScanner
 
     public int NetworkParallelism { get; set; } = 4;
 
-    public FolderScanner(PdfPageCounterService pageCounter, DuplicateDetector duplicateDetector)
-        : this(pageCounter, duplicateDetector, DefaultChannelCapacity)
-    {
-    }
-
-    public FolderScanner(PdfPageCounterService pageCounter, DuplicateDetector duplicateDetector, int channelCapacity)
+    public FolderScanner(
+        PdfPageCounterService pageCounter,
+        DuplicateDetector duplicateDetector,
+        int channelCapacity = DefaultChannelCapacity,
+        IDirectoryLister? lister = null)
     {
         _pageCounter = pageCounter;
         _duplicateDetector = duplicateDetector;
         _channelCapacity = Math.Max(16, channelCapacity);
+        _lister = lister ?? new FileSystemDirectoryLister();
     }
 
     /// <summary>
@@ -135,43 +136,64 @@ public sealed class FolderScanner
             ProgressCounter counter,
             CancellationToken ct)
         {
+            // Iterative walk (explicit stack, no recursion) so pathologically
+            // deep trees cannot overflow the stack. A visited set and a
+            // reparse-point skip keep junctions/symlinks from looping forever.
             var stack = new Stack<string>();
             stack.Push(startPath);
+            var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             while (stack.Count > 0)
             {
                 ct.ThrowIfCancellationRequested();
                 var dir = stack.Pop();
+                var key = dir.TrimEnd('\\');
 
-                IEnumerable<string> subdirs;
-                IEnumerable<string> files;
+                if (!visited.Add(key))
+                {
+                    continue;
+                }
+
+                DirectoryListing listing;
                 try
                 {
-                    subdirs = Directory.EnumerateDirectories(dir);
-                    files = Directory.EnumerateFiles(dir);
+                    // Materialized listing: an enumeration fault is raised here,
+                    // inside the try, so one bad folder is skipped instead of
+                    // aborting the whole discovery pass.
+                    listing = _lister.List(dir);
                 }
-                catch (Exception ex) when (ex is UnauthorizedAccessException or IOException or System.Security.SecurityException)
+                catch (Exception ex) when (ex is UnauthorizedAccessException or IOException
+                    or System.Security.SecurityException or PathTooLongException)
                 {
                     FolderSkipped?.Invoke(dir, DescribeFolderError(ex));
                     continue;
                 }
 
-                foreach (var sub in subdirs)
+                foreach (var sub in listing.Directories)
                 {
                     ct.ThrowIfCancellationRequested();
-                    var node = new FolderNode(Path.GetFileName(sub), sub.TrimEnd('\\'));
-                    folderMap.TryAdd(sub.TrimEnd('\\'), node);
-                    if (folderMap.TryGetValue(dir.TrimEnd('\\'), out var parent))
+
+                    if (IsReparsePoint(sub))
                     {
-                        lock (parent.Children)
-                        {
-                            parent.Children.Add(node);
-                        }
+                        continue;
                     }
-                    stack.Push(sub);
+
+                    var subKey = sub.TrimEnd('\\');
+                    var node = new FolderNode(Path.GetFileName(sub), subKey);
+                    if (folderMap.TryAdd(subKey, node))
+                    {
+                        if (folderMap.TryGetValue(key, out var parent))
+                        {
+                            lock (parent.Children)
+                            {
+                                parent.Children.Add(node);
+                            }
+                        }
+                        stack.Push(sub);
+                    }
                 }
 
-                foreach (var file in files)
+                foreach (var file in listing.Files)
                 {
                     ct.ThrowIfCancellationRequested();
                     if (!string.Equals(Path.GetExtension(file), ".pdf", StringComparison.OrdinalIgnoreCase))
@@ -263,9 +285,22 @@ public sealed class FolderScanner
         {
             UnauthorizedAccessException => "Access denied.",
             System.Security.SecurityException => "Security error.",
+            PathTooLongException => "Path is too long to enumerate.",
             IOException ioEx => $"I/O error: {ioEx.Message}",
             _ => ex.Message ?? "Error enumerating folder.",
         };
+    }
+
+    private static bool IsReparsePoint(string path)
+    {
+        try
+        {
+            return (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private sealed class ProgressCounter

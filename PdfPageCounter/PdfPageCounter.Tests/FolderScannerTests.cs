@@ -198,6 +198,68 @@ public class FolderScannerTests : IDisposable
         Assert.NotNull(root);
     }
 
+    [Fact]
+    public async Task Scan_WhenFolderListingThrows_SkipsFolderAndContinues()
+    {
+        Directory.CreateDirectory(Path.Combine(_tempRoot, "good1"));
+        Directory.CreateDirectory(Path.Combine(_tempRoot, "bad"));
+        Directory.CreateDirectory(Path.Combine(_tempRoot, "good2"));
+        CreatePdf(Path.Combine(_tempRoot, "good1", "x.pdf"), 2);
+        CreatePdf(Path.Combine(_tempRoot, "bad", "y.pdf"), 2);
+        CreatePdf(Path.Combine(_tempRoot, "good2", "z.pdf"), 3);
+
+        var detector = new DuplicateDetector();
+        var scanner = new FolderScanner(new PdfPageCounterService(), detector,
+            lister: new ThrowingLister(Path.Combine(_tempRoot, "bad")));
+
+        var root = await scanner.ScanAsync(_tempRoot, CancellationToken.None);
+
+        // "bad" is skipped; both good branches are still discovered.
+        Assert.Equal(2, root.TotalFileCount);
+        Assert.Equal(5, root.TotalPageCount);
+        // "bad" remains a discovered node (it was listed as a child); only its
+        // contents were skipped, so all three child folders are present.
+        Assert.Equal(3, root.Children.Count);
+    }
+
+    [Fact]
+    public async Task Scan_SelfReferentialDirectory_TerminatesWithSingleNode()
+    {
+        var detector = new DuplicateDetector();
+        var scanner = new FolderScanner(new PdfPageCounterService(), detector,
+            lister: new SelfReferentialLister(_tempRoot));
+
+        var root = await scanner.ScanAsync(_tempRoot, CancellationToken.None);
+
+        Assert.Single(root.Children);
+        Assert.Equal(0, root.TotalFileCount);
+    }
+
+    [Fact]
+    public async Task Scan_DeepNesting_RollsUpCountsAtEveryLevel()
+    {
+        var path = _tempRoot;
+        for (int i = 0; i < 60; i++)
+        {
+            path = Path.Combine(path, "d");
+            Directory.CreateDirectory(path);
+        }
+        CreatePdf(Path.Combine(path, "deep.pdf"), 7);
+
+        var detector = new DuplicateDetector();
+        var scanner = new FolderScanner(new PdfPageCounterService(), detector);
+        var root = await scanner.ScanAsync(_tempRoot, CancellationToken.None);
+
+        var node = root;
+        for (int i = 0; i < 60; i++)
+        {
+            Assert.Equal(1, node.TotalFileCount);
+            Assert.Equal(7, node.TotalPageCount);
+            Assert.Single(node.Children);
+            node = node.Children[0];
+        }
+    }
+
     private static FolderNode AssertSingle(FolderNode parent, string name)
     {
         var matches = parent.Children.Where(c => c.Name == name).ToList();
@@ -209,5 +271,37 @@ public class FolderScannerTests : IDisposable
     {
         detector = new DuplicateDetector();
         return new FolderScanner(new PdfPageCounterService(), detector);
+    }
+
+    private sealed class ThrowingLister : IDirectoryLister
+    {
+        private readonly string _throwFor;
+        private readonly IDirectoryLister _inner = new FileSystemDirectoryLister();
+
+        public ThrowingLister(string throwFor) => _throwFor = throwFor;
+
+        public DirectoryListing List(string directory)
+        {
+            if (string.Equals(directory.TrimEnd('\\'), _throwFor.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
+            {
+                throw new UnauthorizedAccessException("simulated");
+            }
+            return _inner.List(directory);
+        }
+    }
+
+    private sealed class SelfReferentialLister : IDirectoryLister
+    {
+        private readonly string _root;
+
+        public SelfReferentialLister(string root) => _root = root;
+
+        // Every directory reports one child that is itself the same path, which
+        // simulates a junction/symlink loop. Traversal must terminate.
+        public DirectoryListing List(string directory)
+        {
+            var child = Path.Combine(_root, "loop");
+            return new(new[] { child }, Array.Empty<string>());
+        }
     }
 }
