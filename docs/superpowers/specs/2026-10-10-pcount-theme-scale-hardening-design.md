@@ -56,17 +56,22 @@ There is also **no reparse-point / cycle guard**. On "complex storage"
 revisit the same directory forever, growing the work stack until memory is
 exhausted — a second crash vector.
 
-### 2.3 Deep-folder display defects
+### 2.3 UI scalability defects
 
-- `MainPage.xaml` nests a `TreeViewItem` inside the `TreeView.ItemTemplate` while
-  the `TreeView` itself has `ItemsSource`. This container-in-container pattern
-  mis-renders and recycles deep nodes, so labels can appear under the wrong
-  parent.
+- `MainPage.xaml` sets `IsExpanded="True"` on **every** tree node, so WinUI
+  realizes the entire visual tree eagerly. At scale this exhausts memory / hangs
+  the UI thread. (The `TreeViewItem` inside `TreeView.ItemTemplate` with
+  `ItemsSource="{x:Bind Children}"` is the **documented** WinUI hierarchical data
+  pattern — it is correct and is retained.)
 - `{x:Bind DisplayLabel}` / `{x:Bind BadgeText}` default to **OneTime**, so live
   label updates made by `FolderNodeViewModel.RefreshLabel()` are not observed.
 - `MainViewModel.SyncTreeFromModel` runs every 500 ms and performs a fully
   recursive `Reconcile` whose insert path is O(n²). On a large tree this
   dominates CPU and contends with scanning.
+
+Note: the "wrong numbers on deep subfolders" symptom is caused by §2.2 (a single
+enumeration fault silently aborting all remaining discovery), not by the tree
+template.
 
 ## 3. Design
 
@@ -121,6 +126,11 @@ public surface (`ScanAsync`, events) is unchanged.
   include `FileAttributes.ReparsePoint`, and maintain a visited set of
   normalized full paths so a directory is never traversed twice. This prevents
   infinite traversal on junctions/symlinks and prevents double-counting.
+- **Testable enumeration seam.** Introduce a small `IDirectoryLister`
+  abstraction (default implementation reads the real file system) so the
+  abort-resistance and cycle behavior can be unit-tested deterministically.
+  `FolderScanner` accepts an optional lister and defaults to the real file
+  system, so its public behavior and existing constructors are unchanged.
 - **Counts as `long`.** `FolderNode` file/page/duplicate/error counts and the
   related `SummaryViewModel` metrics already surface as `long` in the UI; the
   model's `int` counters are widened to `long` to remove any overflow ceiling
@@ -134,15 +144,13 @@ public surface (`ScanAsync`, events) is unchanged.
 
 ### 3.3 UI tree — correct display + scalability
 
-**Binding fix (`MainPage.xaml`)**
+**Display fix (`MainPage.xaml`)**
 
-- Use the supported hierarchical pattern: the `TreeView.ItemTemplate` supplies
-  the node **content**; child enumeration is provided through the tree item's
-  `ItemsSource` bound to `Children`. The template must not create a second
-  `TreeViewItem` container inside a tree that already has `ItemsSource`.
-  (Exact WinUI 3 pattern verified against current docs during implementation.)
-- `IsExpanded` is bound (TwoWay) to a VM property, **default collapsed**, so
-  branches materialize only when the user expands them.
+- Keep the documented WinUI hierarchical pattern (`TreeViewItem` with
+  `ItemsSource="{x:Bind Children}"`).
+- Remove `IsExpanded="True"` so nodes start **collapsed** and branches
+  materialize only when the user expands them (TreeView virtualizes realized
+  rows).
 - `DisplayLabel` and `BadgeText` bind `Mode=OneWay` so `RefreshLabel()` updates
   are observed.
 
@@ -170,6 +178,7 @@ New (App):
 - `PdfPageCounter.App/Services/ThemeService.cs`
 
 Core:
+- `PdfPageCounter.Core/Services/IDirectoryLister.cs` (new)
 - `PdfPageCounter.Core/Services/FolderScanner.cs`
 - `PdfPageCounter.Core/Models/FolderNode.cs`
 - `PdfPageCounter.Core/Models/PdfFileRecord.cs`
