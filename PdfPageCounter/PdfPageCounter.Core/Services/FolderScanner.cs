@@ -143,6 +143,10 @@ public sealed class FolderScanner
             stack.Push(startPath);
             var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+            // The isolation folder (<root>\duplicates) is intentionally excluded
+            // so isolated copies are never re-counted or re-flagged on a rescan.
+            var excludedPath = startPath.TrimEnd('\\') + "\\duplicates";
+
             while (stack.Count > 0)
             {
                 ct.ThrowIfCancellationRequested();
@@ -180,6 +184,11 @@ public sealed class FolderScanner
                     }
 
                     var subKey = sub.TrimEnd('\\');
+                    if (string.Equals(subKey, excludedPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
                     var node = new FolderNode(Path.GetFileName(sub), subKey);
                     if (folderMap.TryAdd(subKey, node))
                     {
@@ -239,6 +248,7 @@ public sealed class FolderScanner
         {
             Name = Path.GetFileName(file),
             FullPath = file,
+            Size = TryGetSize(file),
         };
 
         var (pageCount, error) = _pageCounter.TryGetPageCount(file);
@@ -255,6 +265,18 @@ public sealed class FolderScanner
         }
 
         return record;
+    }
+
+    private static long TryGetSize(string file)
+    {
+        try
+        {
+            return new FileInfo(file).Length;
+        }
+        catch
+        {
+            return 0;
+        }
     }
 
     private static void RecomputeAll(FolderNode root)

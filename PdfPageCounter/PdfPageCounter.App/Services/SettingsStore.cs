@@ -6,6 +6,15 @@ namespace PdfPageCounter_App.Services;
 public sealed class AppSettings
 {
     public string Theme { get; set; } = "System";
+
+    /// <summary>Show the "Duplicate Files" summary card.</summary>
+    public bool ShowDuplicateCount { get; set; }
+
+    /// <summary>Show the "Unique Pages" summary card.</summary>
+    public bool ShowUniquePageCount { get; set; }
+
+    /// <summary>Re-scan the same root automatically after isolating or reverting.</summary>
+    public bool AutoRescanAfterIsolate { get; set; } = true;
 }
 
 /// <summary>

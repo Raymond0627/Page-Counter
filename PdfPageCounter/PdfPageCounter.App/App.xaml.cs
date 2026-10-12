@@ -66,6 +66,7 @@ public partial class App : Application
         {
             _window = new MainWindow();
             MainAppWindow = _window;
+            ThemeManager.ApplyCaptionButtons();
             _window.Activate();
         }
         catch (Exception ex)

@@ -168,4 +168,39 @@ public class DuplicateDetectorTests
         Assert.Equal(0, detector.DuplicateFileCount());
         Assert.Equal(14, detector.UniquePageTotal());
     }
+
+    [Fact]
+    public void SameNameAndPages_DifferentSize_AreNotDuplicates()
+    {
+        var detector = new DuplicateDetector();
+        var r1 = Rec("Report.pdf", 10);
+        r1.Size = 100;
+        var r2 = Rec("Report.pdf", 10);
+        r2.Size = 200;
+        detector.Add(r1);
+        detector.Add(r2);
+        detector.Resolve();
+
+        Assert.False(r1.IsDuplicate);
+        Assert.False(r2.IsDuplicate);
+        Assert.Equal(0, detector.DuplicateFileCount());
+        Assert.Equal(20, detector.UniquePageTotal());
+    }
+
+    [Fact]
+    public void GetDuplicateGroups_ReturnsOnlyGroupsOfTwoOrMore()
+    {
+        var detector = new DuplicateDetector();
+        var a1 = Rec("a.pdf", 5);
+        var a2 = Rec("a.pdf", 5);
+        var b = Rec("b.pdf", 5);
+        detector.Add(a1);
+        detector.Add(a2);
+        detector.Add(b);
+        detector.Resolve();
+
+        var groups = detector.GetDuplicateGroups();
+        Assert.Single(groups);
+        Assert.Equal(2, groups[0].Count);
+    }
 }

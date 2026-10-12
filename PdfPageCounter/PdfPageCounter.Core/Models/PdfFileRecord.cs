@@ -8,6 +8,9 @@ public sealed class PdfFileRecord
 
     public int PageCount { get; set; }
 
+    /// <summary>File size in bytes; used with name+page count to match duplicates.</summary>
+    public long Size { get; set; }
+
     public bool IsError { get; set; }
 
     public string? ErrorMessage { get; set; }
