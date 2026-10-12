@@ -13,7 +13,7 @@ namespace PdfPageCounter.Core.Services;
 /// </summary>
 public sealed class FolderScanner
 {
-    private const int DefaultChannelCapacity = 4096;
+    private const int DefaultChannelCapacity = 8192;
 
     private readonly PdfPageCounterService _pageCounter;
     private readonly DuplicateDetector _duplicateDetector;
@@ -29,7 +29,7 @@ public sealed class FolderScanner
     // Periodic progress: (processed, discovered) file counts.
     public event Action<long, long>? Progress;
 
-    public int LocalParallelism { get; set; } = Environment.ProcessorCount;
+    public int LocalParallelism { get; set; } = Environment.ProcessorCount * 2;
 
     public int NetworkParallelism { get; set; } = 4;
 
@@ -77,7 +77,7 @@ public sealed class FolderScanner
 
         void HandleFile(PdfFileRecord record)
         {
-            fileCount.Processed++;
+            fileCount.ProcessedIncrement();
             AttachToFolder(record, folderByPath);
 
             if (!record.IsError)
@@ -210,7 +210,7 @@ public sealed class FolderScanner
                     {
                         continue;
                     }
-                    counter.Discovered++;
+                    counter.DiscoveredIncrement();
                     await writer.WriteAsync(file, ct).ConfigureAwait(false);
                 }
             }
@@ -248,10 +248,10 @@ public sealed class FolderScanner
         {
             Name = Path.GetFileName(file),
             FullPath = file,
-            Size = TryGetSize(file),
         };
 
-        var (pageCount, error) = _pageCounter.TryGetPageCount(file);
+        var (pageCount, size, error) = _pageCounter.TryGetPageCountWithSize(file);
+        record.Size = Math.Max(0, size);
 
         if (pageCount >= 0)
         {
@@ -265,18 +265,6 @@ public sealed class FolderScanner
         }
 
         return record;
-    }
-
-    private static long TryGetSize(string file)
-    {
-        try
-        {
-            return new FileInfo(file).Length;
-        }
-        catch
-        {
-            return 0;
-        }
     }
 
     private static void RecomputeAll(FolderNode root)
@@ -333,16 +321,12 @@ public sealed class FolderScanner
         private long _processed;
         private long _discovered;
 
-        public long Processed
-        {
-            get => Interlocked.Read(ref _processed);
-            set => Interlocked.Exchange(ref _processed, value);
-        }
+        public long Processed => Interlocked.Read(ref _processed);
 
-        public long Discovered
-        {
-            get => Interlocked.Read(ref _discovered);
-            set => Interlocked.Exchange(ref _discovered, value);
-        }
+        public long Discovered => Interlocked.Read(ref _discovered);
+
+        public void ProcessedIncrement() => Interlocked.Increment(ref _processed);
+
+        public void DiscoveredIncrement() => Interlocked.Increment(ref _discovered);
     }
 }

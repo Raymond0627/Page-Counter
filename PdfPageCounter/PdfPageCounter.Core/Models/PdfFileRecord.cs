@@ -23,5 +23,8 @@ public sealed class PdfFileRecord
     /// </summary>
     public bool IsOriginal { get; set; }
 
+    /// <summary>True when the file is part of a duplicate group (original or duplicate).</summary>
+    public bool IsGrouped => IsDuplicate || IsOriginal;
+
     public long? DuplicateGroupId { get; set; }
 }

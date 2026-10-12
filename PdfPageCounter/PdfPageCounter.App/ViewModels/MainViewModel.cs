@@ -322,46 +322,82 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Copies the path of the counterpart(s) of <paramref name="record"/> to the
-    /// clipboard: its kept original when the file is a duplicate, or all of its
-    /// duplicate copies when it is the original. Multiple paths are newline-joined.
+    /// Copies the kept original's path of the duplicate group containing
+    /// <paramref name="record"/> to the clipboard.
     /// </summary>
-    public void CopyCounterpartPath(PdfFileRecord record, bool fromOriginal)
+    public void CopyOriginalPath(PdfFileRecord record)
     {
-        var groups = _duplicateDetector.GetDuplicateGroups();
-
-        foreach (var group in groups)
+        if (!TryFindGroup(record, out var group))
         {
-            var isMember = group.Any(m =>
-                string.Equals(m.FullPath, record.FullPath, StringComparison.OrdinalIgnoreCase));
-            if (!isMember)
-            {
-                continue;
-            }
-
-            var counterparts = group
-                .Where(m => fromOriginal ? m.IsOriginal : m.IsDuplicate)
-                .Select(m => m.FullPath)
-                .Where(p => !string.IsNullOrEmpty(p))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            if (counterparts.Count == 0)
-            {
-                Summary.ProgressText = "No counterpart found to copy.";
-                return;
-            }
-
-            var data = new DataPackage();
-            data.SetText(string.Join(Environment.NewLine, counterparts));
-            Clipboard.SetContent(data);
-            Clipboard.Flush();
-
-            Summary.ProgressText = $"Copied {counterparts.Count:N0} path(s) to clipboard.";
+            Summary.ProgressText = "This file is not part of a duplicate group.";
             return;
         }
 
-        Summary.ProgressText = "This file is not part of a duplicate group.";
+        var originals = GatherPaths(group, m => m.IsOriginal);
+        if (originals.Count == 0)
+        {
+            Summary.ProgressText = "No original found to copy.";
+            return;
+        }
+
+        CopyToClipboard(originals);
+        Summary.ProgressText = $"Copied {originals.Count:N0} original path(s) to clipboard.";
+    }
+
+    /// <summary>
+    /// Copies the path(s) of every duplicate copy of the group containing
+    /// <paramref name="record"/> to the clipboard (newline-separated).
+    /// </summary>
+    public void CopyDuplicatePaths(PdfFileRecord record)
+    {
+        if (!TryFindGroup(record, out var group))
+        {
+            Summary.ProgressText = "This file is not part of a duplicate group.";
+            return;
+        }
+
+        var duplicates = GatherPaths(group, m => m.IsDuplicate);
+        if (duplicates.Count == 0)
+        {
+            Summary.ProgressText = "No duplicate copies found to copy.";
+            return;
+        }
+
+        CopyToClipboard(duplicates);
+        Summary.ProgressText = $"Copied {duplicates.Count:N0} duplicate path(s) to clipboard.";
+    }
+
+    private bool TryFindGroup(PdfFileRecord record, out IReadOnlyList<PdfFileRecord> group)
+    {
+        var groups = _duplicateDetector.GetDuplicateGroups();
+        foreach (var candidate in groups)
+        {
+            var isMember = candidate.Any(m =>
+                string.Equals(m.FullPath, record.FullPath, StringComparison.OrdinalIgnoreCase));
+            if (isMember)
+            {
+                group = candidate;
+                return true;
+            }
+        }
+        group = Array.Empty<PdfFileRecord>();
+        return false;
+    }
+
+    private static List<string> GatherPaths(IReadOnlyList<PdfFileRecord> group, Func<PdfFileRecord, bool> predicate) =>
+        group
+            .Where(predicate)
+            .Select(m => m.FullPath)
+            .Where(p => !string.IsNullOrEmpty(p))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private static void CopyToClipboard(List<string> paths)
+    {
+        var data = new DataPackage();
+        data.SetText(string.Join(Environment.NewLine, paths));
+        Clipboard.SetContent(data);
+        Clipboard.Flush();
     }
 
     public void BrowseSelected(string? folderPath)

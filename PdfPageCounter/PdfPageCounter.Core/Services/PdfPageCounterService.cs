@@ -15,25 +15,36 @@ public sealed class PdfPageCounterService
     /// </summary>
     public (int PageCount, string? ErrorMessage) TryGetPageCount(string filePath)
     {
+        var (pageCount, _, error) = TryGetPageCountWithSize(filePath);
+        return (pageCount, error);
+    }
+
+    /// <summary>
+    /// Like <see cref="TryGetPageCount"/> but also returns the file size, so
+    /// callers avoid a second stat. PdfPig's own reader (random-access friendly)
+    /// opens the file, keeping bulk scans as fast as possible.
+    /// </summary>
+    public (int PageCount, long Size, string? ErrorMessage) TryGetPageCountWithSize(string filePath)
+    {
         try
         {
             var info = new FileInfo(filePath);
             if (!info.Exists)
             {
-                return (-1, "File does not exist.");
+                return (-1, 0, "File does not exist.");
             }
 
             if (info.Length == 0)
             {
-                return (-1, "File is zero bytes.");
+                return (-1, 0, "File is zero bytes.");
             }
 
             using var document = PdfDocument.Open(filePath);
-            return (document.NumberOfPages, null);
+            return (document.NumberOfPages, info.Length, null);
         }
         catch (Exception ex)
         {
-            return (-1, DescribeError(ex));
+            return (-1, 0, DescribeError(ex));
         }
     }
 

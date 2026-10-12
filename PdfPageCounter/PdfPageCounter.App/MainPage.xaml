@@ -222,18 +222,29 @@
                                                                 Visibility="{x:Bind IsError, Mode=OneTime}">
                                                             <TextBlock Text="Error" FontSize="11" Foreground="Black" />
                                                         </Border>
-                                                        <Button Style="{StaticResource TagButtonStyle}" Background="#107C10"
-                                                                Visibility="{x:Bind IsOriginal, Mode=OneTime}"
-                                                                ToolTipService.ToolTip="Copy the path of the duplicate copy(ies)"
-                                                                Click="OriginalTag_Click">
+                                                        <Border Background="#107C10" CornerRadius="8" Padding="6,1"
+                                                                Visibility="{x:Bind IsOriginal, Mode=OneTime}">
                                                             <TextBlock Text="Original" FontSize="11" Foreground="White" />
-                                                        </Button>
-                                                        <Button Style="{StaticResource TagButtonStyle}" Background="{ThemeResource AccentFillColorDefaultBrush}"
-                                                                Visibility="{x:Bind IsDuplicate, Mode=OneTime}"
-                                                                ToolTipService.ToolTip="Copy the original file's path"
-                                                                Click="DuplicateTag_Click">
+                                                        </Border>
+                                                        <Border Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                                                CornerRadius="8" Padding="6,1"
+                                                                Visibility="{x:Bind IsDuplicate, Mode=OneTime}">
                                                             <TextBlock Text="Duplicate" FontSize="11" Foreground="White" />
-                                                        </Button>
+                                                        </Border>
+                                                        <Button Style="{StaticResource TagButtonStyle}" BorderThickness="1"
+                                                                BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+                                                                Visibility="{x:Bind IsGrouped, Mode=OneTime}"
+                                                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                                ToolTipService.ToolTip="Copy original path"
+                                                                Content="COP"
+                                                                Click="CopButton_Click" />
+                                                        <Button Style="{StaticResource TagButtonStyle}" BorderThickness="1"
+                                                                BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+                                                                Visibility="{x:Bind IsGrouped, Mode=OneTime}"
+                                                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                                ToolTipService.ToolTip="Copy duplicate path(s)"
+                                                                Content="CDP"
+                                                                Click="CdpButton_Click" />
                                                     </StackPanel>
                                                 </Grid>
                                             </DataTemplate>
