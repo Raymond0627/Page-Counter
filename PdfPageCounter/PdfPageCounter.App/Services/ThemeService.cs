@@ -1,4 +1,6 @@
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Windows.UI;
 
 namespace PdfPageCounter_App.Services;
 
@@ -35,12 +37,61 @@ public sealed class ThemeService
             AppTheme.Dark => ElementTheme.Dark,
             _ => ElementTheme.Default,
         };
+        ApplyCaptionButtons();
+    }
+
+    /// <summary>
+    /// Colors the window caption buttons (minimize/maximize/close) so they stay
+    /// visible in both light and dark themes. In System mode the defaults are
+    /// cleared and Windows decides.
+    /// </summary>
+    public void ApplyCaptionButtons()
+    {
+        var titleBar = App.MainAppWindow?.AppWindow.TitleBar;
+        if (titleBar is null)
+        {
+            return;
+        }
+
+        switch (Current)
+        {
+            case AppTheme.Light:
+                SetCaptionColors(titleBar, dark: false);
+                break;
+            case AppTheme.Dark:
+                SetCaptionColors(titleBar, dark: true);
+                break;
+            default:
+                titleBar.ButtonForegroundColor = null;
+                titleBar.ButtonHoverForegroundColor = null;
+                titleBar.ButtonPressedForegroundColor = null;
+                titleBar.ButtonBackgroundColor = null;
+                titleBar.ButtonHoverBackgroundColor = null;
+                titleBar.ButtonPressedBackgroundColor = null;
+                break;
+        }
     }
 
     public void SetTheme(AppTheme theme)
     {
         Current = theme;
         _store.Save(new AppSettings { Theme = theme.ToString() });
+        ApplyCaptionButtons();
         Changed?.Invoke();
     }
+
+    private static void SetCaptionColors(AppWindowTitleBar titleBar, bool dark)
+    {
+        var glyph = dark ? Microsoft.UI.Colors.White : Microsoft.UI.Colors.Black;
+        var hoverBg = dark ? Windows.UI.Color.FromArgb(255, 0x33, 0x33, 0x33) : Windows.UI.Color.FromArgb(255, 0xE5, 0xE5, 0xE5);
+        var pressedBg = dark ? Windows.UI.Color.FromArgb(255, 0x44, 0x44, 0x44) : Windows.UI.Color.FromArgb(255, 0xCC, 0xCC, 0xCC);
+
+        titleBar.ButtonForegroundColor = glyph;
+        titleBar.ButtonHoverForegroundColor = glyph;
+        titleBar.ButtonPressedForegroundColor = glyph;
+        titleBar.ButtonBackgroundColor = Microsoft.UI.Colors.Transparent;
+        titleBar.ButtonHoverBackgroundColor = hoverBg;
+        titleBar.ButtonPressedBackgroundColor = pressedBg;
+    }
 }
+

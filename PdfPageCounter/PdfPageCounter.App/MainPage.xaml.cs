@@ -26,9 +26,9 @@ public sealed partial class MainPage : Page
         ThemeDark.IsChecked = current == AppTheme.Dark;
     }
 
-    private void ThemeItem_Click(object sender, RoutedEventArgs e)
+    private void ThemeRadio_Checked(object sender, RoutedEventArgs e)
     {
-        if (sender is RadioMenuFlyoutItem { Tag: string tag } &&
+        if (sender is RadioButton { Tag: string tag } &&
             Enum.TryParse<AppTheme>(tag, out var theme))
         {
             App.ThemeManager.SetTheme(theme);
@@ -36,6 +36,54 @@ public sealed partial class MainPage : Page
             {
                 App.ThemeManager.ApplyTo(root);
             }
+        }
+    }
+
+    private async void IsolateDuplicatesButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_viewModel.CanIsolate || _viewModel.IsolatableFileCount <= 0)
+        {
+            return;
+        }
+
+        var dialog = new ContentDialog
+        {
+            Title = "Isolate duplicates",
+            Content = $"Move {_viewModel.IsolatableFileCount:N0} duplicate file(s) from {_viewModel.DuplicateGroupCount:N0} " +
+                      $"group(s) into \"{_viewModel.CurrentIsolationRoot}\\duplicates\", keeping one original per group? " +
+                      "You can revert this afterwards.",
+            PrimaryButtonText = "Isolate",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = XamlRoot,
+        };
+
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+        {
+            await _viewModel.IsolateDuplicatesCommand.ExecuteAsync(null);
+        }
+    }
+
+    private async void RevertIsolationButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_viewModel.CanRevert)
+        {
+            return;
+        }
+
+        var dialog = new ContentDialog
+        {
+            Title = "Revert isolation",
+            Content = "Move every isolated duplicate file out of the \"duplicates\" folder back to its original location?",
+            PrimaryButtonText = "Revert",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = XamlRoot,
+        };
+
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+        {
+            await _viewModel.RevertIsolationCommand.ExecuteAsync(null);
         }
     }
 

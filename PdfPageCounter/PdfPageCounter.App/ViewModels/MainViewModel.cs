@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Dispatching;
 using PdfPageCounter.Core.Models;
 using PdfPageCounter.Core.Services;
+using PdfPageCounter_App.Services;
 
 namespace PdfPageCounter_App.ViewModels;
 
@@ -13,9 +14,13 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly PdfPageCounterService _pageCounter;
     private readonly FolderScanner _scanner;
     private readonly DuplicateDetector _duplicateDetector;
+    private readonly DuplicateIsolator _isolator = new();
 
     private CancellationTokenSource? _cts;
     private DispatcherQueueTimer? _refreshTimer;
+
+    // True once the user asked to stop, until the current scan finishes.
+    private bool _cancelRequested;
 
     // UI-thread snapshot counters produced by the periodic timer.
     private long _displayTotalFiles;
@@ -30,6 +35,8 @@ public sealed partial class MainViewModel : ObservableObject
     private FolderNode? _rootModel;
 
     public SummaryViewModel Summary { get; } = new();
+
+    public SettingsViewModel Settings { get; } = new(new SettingsStore());
 
     public ObservableCollection<FolderNodeViewModel> TreeRoots { get; } = new();
 
@@ -49,6 +56,21 @@ public sealed partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private string _errorMessage = string.Empty;
+
+    [ObservableProperty]
+    private bool _canIsolate;
+
+    [ObservableProperty]
+    private bool _canRevert;
+
+    [ObservableProperty]
+    private string? _currentIsolationRoot;
+
+    [ObservableProperty]
+    private int _duplicateGroupCount;
+
+    [ObservableProperty]
+    private int _isolatableFileCount;
 
     public MainViewModel(DispatcherQueue dispatcher)
     {
@@ -132,6 +154,11 @@ public sealed partial class MainViewModel : ObservableObject
             return;
         }
 
+        await RunScanAsync(path);
+    }
+
+    private async Task RunScanAsync(string path)
+    {
         BeginNewScan(path);
         var cts = _cts!;
 
@@ -139,15 +166,29 @@ public sealed partial class MainViewModel : ObservableObject
         {
             var root = await _scanner.ScanAsync(path, cts.Token);
             _rootModel = root;
+            var cancelled = cts.IsCancellationRequested;
 
             await _dispatcher.EnqueueAsync(() =>
             {
                 // Clear the scanning flag first so the live-refresh timer can no
                 // longer overwrite the scoped values we are about to set.
                 Summary.IsScanning = false;
-                BuildTreeFromModel(root);
-                RefreshSummaryFromModel(root);
-                Summary.ProgressText = $"Done — {Summary.TotalFiles:N0} files, {Summary.TotalPages:N0} pages.";
+
+                if (cancelled)
+                {
+                    Summary.IsCancelled = true;
+                    BuildTreeFromModel(root);
+                    RefreshSummaryFromModel(root);
+                    Summary.ProgressText = "Scan cancelled — results are partial.";
+                }
+                else
+                {
+                    BuildTreeFromModel(root);
+                    RefreshSummaryFromModel(root);
+                    Summary.ProgressText = $"Done — {Summary.TotalFiles:N0} files, {Summary.TotalPages:N0} pages.";
+                }
+
+                UpdateIsolateAvailability(root);
             });
         }
         catch (OperationCanceledException)
@@ -157,8 +198,10 @@ public sealed partial class MainViewModel : ObservableObject
                 Summary.IsScanning = false;
                 if (_rootModel != null)
                 {
+                    Summary.IsCancelled = true;
                     BuildTreeFromModel(_rootModel);
                     RefreshSummaryFromModel(_rootModel);
+                    UpdateIsolateAvailability(_rootModel);
                 }
                 Summary.ProgressText = "Scan cancelled — results are partial.";
             });
@@ -179,8 +222,102 @@ public sealed partial class MainViewModel : ObservableObject
     {
         if (Summary.IsScanning && _cts != null)
         {
+            _cancelRequested = true;
             _cts.Cancel();
+            Summary.ProgressText = "Cancelling…";
         }
+    }
+
+    // ---------------- Duplicate isolation ----------------
+
+    [RelayCommand]
+    private async Task IsolateDuplicatesAsync()
+    {
+        if (_rootModel is null || Summary.IsScanning)
+        {
+            return;
+        }
+
+        try
+        {
+            var path = _rootModel.FullPath;
+            var groups = _duplicateDetector.GetDuplicateGroups();
+            var result = await Task.Run(() => _isolator.Isolate(path, groups));
+
+            if (Settings.AutoRescanAfterIsolate)
+            {
+                await RunScanAsync(path);
+                Summary.ProgressText = $"Isolated {result.MovedCount:N0} duplicate(s) into {result.DestinationRoot} — re-scanned.";
+            }
+            else
+            {
+                CanRevert = _isolator.CanRevert(path);
+                CanIsolate = _duplicateDetector.GetDuplicateGroups().Count > 0;
+                Summary.ProgressText = $"Isolated {result.MovedCount:N0} duplicate(s) into {result.DestinationRoot}.";
+            }
+
+            if (result.FailedCount > 0)
+            {
+                SetError($"{result.FailedCount} file(s) could not be isolated.");
+            }
+        }
+        catch (Exception ex)
+        {
+            SetError($"Isolation failed: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private async Task RevertIsolationAsync()
+    {
+        if (_rootModel is null || Summary.IsScanning)
+        {
+            return;
+        }
+
+        try
+        {
+            var path = _rootModel.FullPath;
+            var result = await Task.Run(() => _isolator.Revert(path));
+
+            if (Settings.AutoRescanAfterIsolate)
+            {
+                await RunScanAsync(path);
+                Summary.ProgressText = $"Reverted {result.MovedCount:N0} file(s) to their original folders — re-scanned.";
+            }
+            else
+            {
+                CanRevert = _isolator.CanRevert(path);
+                CanIsolate = _duplicateDetector.GetDuplicateGroups().Count > 0;
+                Summary.ProgressText = $"Reverted {result.MovedCount:N0} file(s).";
+            }
+
+            if (result.FailedCount > 0)
+            {
+                SetError($"{result.FailedCount} file(s) could not be reverted.");
+            }
+        }
+        catch (Exception ex)
+        {
+            SetError($"Revert failed: {ex.Message}");
+        }
+    }
+
+    private void UpdateIsolateAvailability(FolderNode root)
+    {
+        var groups = _duplicateDetector.GetDuplicateGroups();
+        DuplicateGroupCount = groups.Count;
+
+        var destRoot = Path.Combine(root.FullPath, "duplicates");
+        IsolatableFileCount = groups.Sum(g =>
+        {
+            var outside = g.Count(f => !f.FullPath.StartsWith(destRoot + "\\", StringComparison.OrdinalIgnoreCase));
+            return Math.Max(0, outside - 1);
+        });
+
+        CanIsolate = IsolatableFileCount > 0;
+        CanRevert = _isolator.CanRevert(root.FullPath);
+        CurrentIsolationRoot = root.FullPath;
     }
 
     public void BrowseSelected(string? folderPath)
@@ -210,6 +347,7 @@ public sealed partial class MainViewModel : ObservableObject
 
         CurrentRoot = path;
         _cts = new CancellationTokenSource();
+        _cancelRequested = false;
         Summary.IsScanning = true;
         Summary.ProgressText = "Preparing…";
         _dotFrame = 0;
@@ -284,7 +422,7 @@ public sealed partial class MainViewModel : ObservableObject
             {
                 _dotFrame = (_dotFrame + 1) % 3;
             }
-            Summary.ScanningLabel = "Scanning" + new string('.', _dotFrame + 1);
+            Summary.ScanningLabel = (_cancelRequested ? "Stopping" : "Scanning") + new string('.', _dotFrame + 1);
         }
 
         Summary.ErrorCount = _displayErrorCount;
