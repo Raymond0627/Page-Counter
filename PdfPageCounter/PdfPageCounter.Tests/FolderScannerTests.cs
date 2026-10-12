@@ -123,12 +123,15 @@ public class FolderScannerTests : IDisposable
         var left = AssertSingle(root, "left");
         var right = AssertSingle(root, "right");
 
-        Assert.Single(left.Files, f => f.IsDuplicate);
+        // left\report.pdf is the kept original (shallowest, tie-break by path);
+        // right\report.pdf is the duplicate copy.
+        Assert.Single(left.Files, f => f.IsOriginal);
         Assert.Single(right.Files, f => f.IsDuplicate);
 
-        // Duplicate count counts all members (=2), unique total = 4.
-        Assert.Equal(2L, detector.DuplicateFileCount());
+        // One original per group, so the duplicate file count is 1, not 2.
+        Assert.Equal(1L, detector.DuplicateFileCount());
         Assert.Equal(4L, detector.UniquePageTotal());
+        Assert.Equal(4L, detector.DuplicatePageCount());
     }
 
     [Fact]

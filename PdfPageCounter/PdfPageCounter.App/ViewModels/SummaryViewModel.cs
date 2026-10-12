@@ -12,6 +12,7 @@ public sealed class SummaryViewModel : INotifyPropertyChanged
     private long _totalFiles;
     private long _duplicateFileCount;
     private long _uniquePageTotal;
+    private long _duplicatePages;
     private long _errorCount;
     private long _skippedFolderCount;
     private bool _isScanning;
@@ -53,6 +54,13 @@ public sealed class SummaryViewModel : INotifyPropertyChanged
     {
         get => _uniquePageTotal;
         set => SetField(ref _uniquePageTotal, value);
+    }
+
+    /// <summary>Pages belonging to duplicate copies only (originals excluded).</summary>
+    public long DuplicatePages
+    {
+        get => _duplicatePages;
+        set => SetField(ref _duplicatePages, value);
     }
 
     public long ErrorCount
@@ -114,6 +122,7 @@ public sealed class SummaryViewModel : INotifyPropertyChanged
         TotalFiles = 0;
         DuplicateFileCount = 0;
         UniquePageTotal = 0;
+        DuplicatePages = 0;
         ErrorCount = 0;
         SkippedFolderCount = 0;
         IsCancelled = false;
@@ -149,6 +158,10 @@ public sealed class SummaryViewModel : INotifyPropertyChanged
             {
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(UniquePageTotalText)));
             }
+            else if (propertyName == nameof(DuplicatePages))
+            {
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DuplicatePagesText)));
+            }
             else if (propertyName == nameof(ScopeText))
             {
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HasScope)));
@@ -174,5 +187,6 @@ public sealed class SummaryViewModel : INotifyPropertyChanged
     public string TotalFilesText => TotalFiles.ToString("N0");
     public string DuplicateFileCountText => DuplicateFileCount.ToString("N0");
     public string UniquePageTotalText => UniquePageTotal.ToString("N0");
+    public string DuplicatePagesText => DuplicatePages.ToString("N0");
     public string ErrorCountText => ErrorCount.ToString("N0");
 }

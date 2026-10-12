@@ -13,6 +13,9 @@ public sealed class AppSettings
     /// <summary>Show the "Unique Pages" summary card.</summary>
     public bool ShowUniquePageCount { get; set; }
 
+    /// <summary>Show the "Duplicate Pages" summary card.</summary>
+    public bool ShowDuplicatePages { get; set; }
+
     /// <summary>Re-scan the same root automatically after isolating or reverting.</summary>
     public bool AutoRescanAfterIsolate { get; set; } = true;
 }

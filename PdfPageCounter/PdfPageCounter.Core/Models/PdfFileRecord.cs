@@ -17,5 +17,11 @@ public sealed class PdfFileRecord
 
     public bool IsDuplicate { get; set; }
 
+    /// <summary>
+    /// True for the single kept copy of each duplicate group (the "original").
+    /// The other N-1 members of the group are marked <see cref="IsDuplicate"/>.
+    /// </summary>
+    public bool IsOriginal { get; set; }
+
     public long? DuplicateGroupId { get; set; }
 }

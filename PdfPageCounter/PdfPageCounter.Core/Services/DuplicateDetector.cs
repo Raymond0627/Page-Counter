@@ -43,8 +43,9 @@ public sealed class DuplicateDetector
     }
 
     /// <summary>
-    /// Final or intermediate reconciliation pass: flags every record that
-    /// belongs to a group of 2+ as a duplicate and assigns a shared group id.
+    /// Final or intermediate reconciliation pass: for every group of 2+, marks
+    /// the shallowest-path member as the kept original and every other member
+    /// as a duplicate, assigning a shared group id.
     /// </summary>
     public void Resolve()
     {
@@ -61,10 +62,13 @@ public sealed class DuplicateDetector
                 foreach (var member in group)
                 {
                     member.IsDuplicate = false;
+                    member.IsOriginal = false;
                     member.DuplicateGroupId = null;
                 }
                 continue;
             }
+
+            var keeper = KeeperOf(group);
 
             long id;
             lock (_sync)
@@ -74,7 +78,9 @@ public sealed class DuplicateDetector
             }
             foreach (var member in group)
             {
-                member.IsDuplicate = true;
+                var isKeeper = ReferenceEquals(member, keeper);
+                member.IsDuplicate = !isKeeper;
+                member.IsOriginal = isKeeper;
                 member.DuplicateGroupId = id;
             }
         }
@@ -108,7 +114,7 @@ public sealed class DuplicateDetector
 
     /// <summary>
     /// Number of files flagged as duplicates after the last Resolve call.
-    /// Counts EVERY member of every duplicate group (per decided spec).
+    /// One original is kept per group, so a group of N copies contributes N-1.
     /// </summary>
     public long DuplicateFileCount()
     {
@@ -123,11 +129,53 @@ public sealed class DuplicateDetector
         {
             if (group.Count >= 2)
             {
-                count += group.Count;
+                count += group.Count - 1;
             }
         }
         return count;
     }
+
+    /// <summary>
+    /// Total pages of the duplicate (non-original) files only — the pages of the
+    /// one kept original per group are excluded. Error files contribute nothing.
+    /// </summary>
+    public long DuplicatePageCount()
+    {
+        List<List<PdfFileRecord>> groups;
+        lock (_sync)
+        {
+            groups = _groups.Values.ToList();
+        }
+
+        long total = 0;
+        foreach (var group in groups)
+        {
+            if (group.Count < 2)
+            {
+                continue;
+            }
+
+            var keeper = KeeperOf(group);
+            foreach (var member in group)
+            {
+                if (!ReferenceEquals(member, keeper) && !member.IsError)
+                {
+                    total += member.PageCount;
+                }
+            }
+        }
+        return total;
+    }
+
+    private static PdfFileRecord KeeperOf(IReadOnlyList<PdfFileRecord> group) =>
+        group
+            .Where(m => !m.IsError)
+            .OrderBy(m => Depth(m.FullPath))
+            .ThenBy(m => m.FullPath, StringComparer.OrdinalIgnoreCase)
+            .First();
+
+    private static int Depth(string path) =>
+        path.Count(c => c == '\\') + path.Count(c => c == '/');
 
     /// <summary>
     /// Computes the unique page total: for each set of distinct (name, pageCount)

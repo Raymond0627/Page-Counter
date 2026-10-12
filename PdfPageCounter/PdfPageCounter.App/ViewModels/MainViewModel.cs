@@ -441,6 +441,7 @@ public sealed partial class MainViewModel : ObservableObject
         // Duplicate figures after Resolve().
         Summary.DuplicateFileCount = _duplicateDetector.DuplicateFileCount();
         Summary.UniquePageTotal = _duplicateDetector.UniquePageTotal();
+        Summary.DuplicatePages = _duplicateDetector.DuplicatePageCount();
     }
 
     // ---------------- Tree building ----------------

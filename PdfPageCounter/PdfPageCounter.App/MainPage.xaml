@@ -155,6 +155,13 @@
                                     </StackPanel>
                                 </Border>
                                 <Border MinWidth="150" Style="{StaticResource SummaryCardStyle}"
+                                        Visibility="{Binding Settings.ShowDuplicatePages, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <StackPanel>
+                                        <TextBlock Text="Duplicate Pages" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock FontSize="26" FontWeight="Bold" Text="{Binding Summary.DuplicatePagesText}" />
+                                    </StackPanel>
+                                </Border>
+                                <Border MinWidth="150" Style="{StaticResource SummaryCardStyle}"
                                         Visibility="{Binding Settings.ShowUniquePageCount, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <StackPanel>
                                         <TextBlock Text="Unique Pages" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -207,6 +214,10 @@
                                                                 Visibility="{x:Bind IsError, Mode=OneTime}">
                                                             <TextBlock Text="Error" FontSize="11" Foreground="Black" />
                                                         </Border>
+                                                        <Border Background="#107C10" CornerRadius="8" Padding="6,1"
+                                                                Visibility="{x:Bind IsOriginal, Mode=OneTime}">
+                                                            <TextBlock Text="Original" FontSize="11" Foreground="White" />
+                                                        </Border>
                                                         <Border Background="{ThemeResource AccentFillColorDefaultBrush}"
                                                                 CornerRadius="8" Padding="6,1"
                                                                 Visibility="{x:Bind IsDuplicate, Mode=OneTime}">
@@ -246,6 +257,9 @@
                             <ToggleSwitch Header="Show unique page count"
                                           IsOn="{Binding Settings.ShowUniquePageCount, Mode=TwoWay}"
                                           OnContent="Unique pages appear as a card" OffContent="Unique pages hidden" />
+                            <ToggleSwitch Header="Show duplicate pages"
+                                          IsOn="{Binding Settings.ShowDuplicatePages, Mode=TwoWay}"
+                                          OnContent="Duplicate pages appear as a card" OffContent="Duplicate pages hidden" />
                         </StackPanel>
 
                         <StackPanel Spacing="4">

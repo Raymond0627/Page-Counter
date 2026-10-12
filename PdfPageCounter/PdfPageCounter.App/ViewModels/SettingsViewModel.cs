@@ -17,6 +17,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         var saved = store.Load();
         ShowDuplicateCount = saved.ShowDuplicateCount;
         ShowUniquePageCount = saved.ShowUniquePageCount;
+        ShowDuplicatePages = saved.ShowDuplicatePages;
         AutoRescanAfterIsolate = saved.AutoRescanAfterIsolate;
     }
 
@@ -27,11 +28,16 @@ public sealed partial class SettingsViewModel : ObservableObject
     private bool _showUniquePageCount;
 
     [ObservableProperty]
+    private bool _showDuplicatePages;
+
+    [ObservableProperty]
     private bool _autoRescanAfterIsolate = true;
 
     partial void OnShowDuplicateCountChanged(bool value) => Save();
 
     partial void OnShowUniquePageCountChanged(bool value) => Save();
+
+    partial void OnShowDuplicatePagesChanged(bool value) => Save();
 
     partial void OnAutoRescanAfterIsolateChanged(bool value) => Save();
 
@@ -40,6 +46,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         var settings = _store.Load();
         settings.ShowDuplicateCount = ShowDuplicateCount;
         settings.ShowUniquePageCount = ShowUniquePageCount;
+        settings.ShowDuplicatePages = ShowDuplicatePages;
         settings.AutoRescanAfterIsolate = AutoRescanAfterIsolate;
         _store.Save(settings);
     }
