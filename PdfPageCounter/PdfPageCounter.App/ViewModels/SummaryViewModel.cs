@@ -18,6 +18,7 @@ public sealed class SummaryViewModel : INotifyPropertyChanged
     private bool _isCancelled;
     private bool _hasResults;
     private string _progressText = string.Empty;
+    private string _scanningLabel = string.Empty;
     private string _scopeText = string.Empty;
 
     /// <summary>
@@ -97,6 +98,16 @@ public sealed class SummaryViewModel : INotifyPropertyChanged
         set => SetField(ref _progressText, value);
     }
 
+    /// <summary>
+    /// Animated "Scanning…" label. Its trailing dots cycle so the in-progress
+    /// state is visible even when the file counter is not changing quickly.
+    /// </summary>
+    public string ScanningLabel
+    {
+        get => _scanningLabel;
+        set => SetField(ref _scanningLabel, value);
+    }
+
     public void Reset()
     {
         TotalPages = 0;
@@ -109,6 +120,7 @@ public sealed class SummaryViewModel : INotifyPropertyChanged
         HasResults = false;
         IsScanning = false;
         ProgressText = string.Empty;
+        ScanningLabel = string.Empty;
         ScopeText = string.Empty;
     }
 

@@ -23,6 +23,10 @@ public sealed partial class MainViewModel : ObservableObject
     private long _displayErrorCount;
     private long _displaySkippedFolders;
 
+    // Drives the pulsing ellipsis on the "Scanning..." label.
+    private int _dotFrame;
+    private int _dotTick;
+
     private FolderNode? _rootModel;
 
     public SummaryViewModel Summary { get; } = new();
@@ -208,6 +212,9 @@ public sealed partial class MainViewModel : ObservableObject
         _cts = new CancellationTokenSource();
         Summary.IsScanning = true;
         Summary.ProgressText = "Preparing…";
+        _dotFrame = 0;
+        _dotTick = 0;
+        Summary.ScanningLabel = "Scanning.";
 
         StartTimers();
     }
@@ -270,7 +277,14 @@ public sealed partial class MainViewModel : ObservableObject
         {
             Summary.TotalFiles = _displayTotalFiles;
             Summary.TotalPages = _displayTotalPages;
-            Summary.ProgressText = $"Scanning… {_displayTotalFiles:N0} files processed";
+            Summary.ProgressText = $"{_displayTotalFiles:N0} files processed";
+
+            // Advance the pulsing ellipsis roughly every half second (5 x 100 ms).
+            if (++_dotTick % 5 == 0)
+            {
+                _dotFrame = (_dotFrame + 1) % 3;
+            }
+            Summary.ScanningLabel = "Scanning" + new string('.', _dotFrame + 1);
         }
 
         Summary.ErrorCount = _displayErrorCount;
