@@ -206,17 +206,19 @@
                                               SelectionMode="None">
                                         <ListView.ItemTemplate>
                                             <DataTemplate x:DataType="models:PdfFileRecord">
-                                                <Grid Padding="4,2" ColumnSpacing="8">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="90" />
-                                                        <ColumnDefinition Width="120" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBlock Grid.Column="0" Text="{x:Bind Name}"
-                                                               TextTrimming="CharacterEllipsis"
-                                                               ToolTipService.ToolTip="{x:Bind FullPath}" />
-                                                    <TextBlock Grid.Column="1"
-                                                               Text="{x:Bind PageCount, Mode=OneTime}" />
+<Grid Padding="4,2" ColumnSpacing="8" HorizontalAlignment="Stretch">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" MinWidth="80" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{x:Bind Name}"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           VerticalAlignment="Center"
+                                                           ToolTipService.ToolTip="{x:Bind FullPath}" />
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{x:Bind PageCount, Mode=OneTime}"
+                                                           VerticalAlignment="Center" />
                                                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
                                                         <Border Background="#FFB900" CornerRadius="8" Padding="6,1"
                                                                 Visibility="{x:Bind IsError, Mode=OneTime}">

@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Runtime.InteropServices;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Dispatching;
@@ -327,21 +328,34 @@ public sealed partial class MainViewModel : ObservableObject
     /// </summary>
     public void CopyOriginalPath(PdfFileRecord record)
     {
-        if (!TryFindGroup(record, out var group))
+        try
         {
-            Summary.ProgressText = "This file is not part of a duplicate group.";
-            return;
-        }
+            if (!TryFindGroup(record, out var group))
+            {
+                Summary.ProgressText = "This file is not part of a duplicate group.";
+                return;
+            }
 
-        var originals = GatherPaths(group, m => m.IsOriginal);
-        if (originals.Count == 0)
+            var originals = GatherPaths(group, m => m.IsOriginal);
+            if (originals.Count == 0)
+            {
+                Summary.ProgressText = "No original found to copy.";
+                return;
+            }
+
+            if (CopyToClipboard(originals))
+            {
+                Summary.ProgressText = $"Copied {originals.Count:N0} original path(s) to clipboard.";
+            }
+            else
+            {
+                Summary.ProgressText = "Could not access the clipboard.";
+            }
+        }
+        catch (Exception ex)
         {
-            Summary.ProgressText = "No original found to copy.";
-            return;
+            Summary.ProgressText = $"Copy failed: {ex.Message}";
         }
-
-        CopyToClipboard(originals);
-        Summary.ProgressText = $"Copied {originals.Count:N0} original path(s) to clipboard.";
     }
 
     /// <summary>
@@ -350,21 +364,34 @@ public sealed partial class MainViewModel : ObservableObject
     /// </summary>
     public void CopyDuplicatePaths(PdfFileRecord record)
     {
-        if (!TryFindGroup(record, out var group))
+        try
         {
-            Summary.ProgressText = "This file is not part of a duplicate group.";
-            return;
-        }
+            if (!TryFindGroup(record, out var group))
+            {
+                Summary.ProgressText = "This file is not part of a duplicate group.";
+                return;
+            }
 
-        var duplicates = GatherPaths(group, m => m.IsDuplicate);
-        if (duplicates.Count == 0)
+            var duplicates = GatherPaths(group, m => m.IsDuplicate);
+            if (duplicates.Count == 0)
+            {
+                Summary.ProgressText = "No duplicate copies found to copy.";
+                return;
+            }
+
+            if (CopyToClipboard(duplicates))
+            {
+                Summary.ProgressText = $"Copied {duplicates.Count:N0} duplicate path(s) to clipboard.";
+            }
+            else
+            {
+                Summary.ProgressText = "Could not access the clipboard.";
+            }
+        }
+        catch (Exception ex)
         {
-            Summary.ProgressText = "No duplicate copies found to copy.";
-            return;
+            Summary.ProgressText = $"Copy failed: {ex.Message}";
         }
-
-        CopyToClipboard(duplicates);
-        Summary.ProgressText = $"Copied {duplicates.Count:N0} duplicate path(s) to clipboard.";
     }
 
     private bool TryFindGroup(PdfFileRecord record, out IReadOnlyList<PdfFileRecord> group)
@@ -392,12 +419,74 @@ public sealed partial class MainViewModel : ObservableObject
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-    private static void CopyToClipboard(List<string> paths)
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool OpenClipboard(IntPtr hWndNewOwner);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool CloseClipboard();
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool EmptyClipboard();
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr SetClipboardData(uint uFormat, IntPtr hMem);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr GlobalAlloc(uint uFlags, UIntPtr dwBytes);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr GlobalLock(IntPtr hMem);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool GlobalUnlock(IntPtr hMem);
+
+    private const uint GHND = 0x0042;
+    private const uint CF_UNICODETEXT = 13;
+
+    private static bool CopyToClipboard(List<string> paths)
     {
-        var data = new DataPackage();
-        data.SetText(string.Join(Environment.NewLine, paths));
-        Clipboard.SetContent(data);
-        Clipboard.Flush();
+        var text = string.Join(Environment.NewLine, paths);
+        var bytes = System.Text.Encoding.Unicode.GetBytes(text + '\0');
+
+        try
+        {
+            // Try WinRT first; if unavailable in this context, fall back to Win32.
+            var data = new DataPackage();
+            data.SetText(text);
+            Clipboard.SetContent(data);
+            return true;
+        }
+        catch
+        {
+            // Fall back to user32-based copy for unpackaged apps.
+        }
+
+        try
+        {
+            if (!OpenClipboard(IntPtr.Zero))
+            {
+                return false;
+            }
+            EmptyClipboard();
+            IntPtr hGlobal = GlobalAlloc(GHND, (UIntPtr)bytes.Length);
+            if (hGlobal != IntPtr.Zero)
+            {
+                IntPtr lp = GlobalLock(hGlobal);
+                if (lp != IntPtr.Zero)
+                {
+                    Marshal.Copy(bytes, 0, lp, bytes.Length);
+                    GlobalUnlock(hGlobal);
+                    SetClipboardData(CF_UNICODETEXT, hGlobal);
+                }
+            }
+            CloseClipboard();
+            return true;
+        }
+        catch
+        {
+            try { CloseClipboard(); } catch { }
+            return false;
+        }
     }
 
     public void BrowseSelected(string? folderPath)
