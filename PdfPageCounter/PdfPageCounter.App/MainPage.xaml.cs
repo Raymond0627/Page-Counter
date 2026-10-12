@@ -123,19 +123,11 @@ public sealed partial class MainPage : Page
         }
     }
 
-    private void CopButton_Click(object sender, RoutedEventArgs e)
+    private void CopyPathsButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement fe && fe.DataContext is PdfFileRecord record)
         {
-            _viewModel.CopyOriginalPath(record);
-        }
-    }
-
-    private void CdpButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement fe && fe.DataContext is PdfFileRecord record)
-        {
-            _viewModel.CopyDuplicatePaths(record);
+            _viewModel.CopyGroupPaths(record);
         }
     }
 }

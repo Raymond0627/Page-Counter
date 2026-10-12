@@ -237,16 +237,9 @@
                                                                 BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
                                                                 Visibility="{x:Bind IsGrouped, Mode=OneTime}"
                                                                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                                                ToolTipService.ToolTip="Copy original path"
-                                                                Content="COP"
-                                                                Click="CopButton_Click" />
-                                                        <Button Style="{StaticResource TagButtonStyle}" BorderThickness="1"
-                                                                BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
-                                                                Visibility="{x:Bind IsGrouped, Mode=OneTime}"
-                                                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                                                ToolTipService.ToolTip="Copy duplicate path(s)"
-                                                                Content="CDP"
-                                                                Click="CdpButton_Click" />
+                                                                ToolTipService.ToolTip="Copy all paths in this duplicate group"
+                                                                Content="Copy Paths"
+                                                                Click="CopyPathsButton_Click" />
                                                     </StackPanel>
                                                 </Grid>
                                             </DataTemplate>

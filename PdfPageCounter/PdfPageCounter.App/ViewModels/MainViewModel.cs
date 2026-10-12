@@ -323,10 +323,11 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Copies the kept original's path of the duplicate group containing
-    /// <paramref name="record"/> to the clipboard.
+    /// Copies the paths of every file in the duplicate group containing
+    /// <paramref name="record"/> — the kept original and all duplicates — to the
+    /// clipboard, one per line.
     /// </summary>
-    public void CopyOriginalPath(PdfFileRecord record)
+    public void CopyGroupPaths(PdfFileRecord record)
     {
         try
         {
@@ -336,52 +337,16 @@ public sealed partial class MainViewModel : ObservableObject
                 return;
             }
 
-            var originals = GatherPaths(group, m => m.IsOriginal);
-            if (originals.Count == 0)
+            var paths = GatherPaths(group, _ => true);
+            if (paths.Count == 0)
             {
-                Summary.ProgressText = "No original found to copy.";
+                Summary.ProgressText = "No paths found to copy.";
                 return;
             }
 
-            if (CopyToClipboard(originals))
+            if (CopyToClipboard(paths))
             {
-                Summary.ProgressText = $"Copied {originals.Count:N0} original path(s) to clipboard.";
-            }
-            else
-            {
-                Summary.ProgressText = "Could not access the clipboard.";
-            }
-        }
-        catch (Exception ex)
-        {
-            Summary.ProgressText = $"Copy failed: {ex.Message}";
-        }
-    }
-
-    /// <summary>
-    /// Copies the path(s) of every duplicate copy of the group containing
-    /// <paramref name="record"/> to the clipboard (newline-separated).
-    /// </summary>
-    public void CopyDuplicatePaths(PdfFileRecord record)
-    {
-        try
-        {
-            if (!TryFindGroup(record, out var group))
-            {
-                Summary.ProgressText = "This file is not part of a duplicate group.";
-                return;
-            }
-
-            var duplicates = GatherPaths(group, m => m.IsDuplicate);
-            if (duplicates.Count == 0)
-            {
-                Summary.ProgressText = "No duplicate copies found to copy.";
-                return;
-            }
-
-            if (CopyToClipboard(duplicates))
-            {
-                Summary.ProgressText = $"Copied {duplicates.Count:N0} duplicate path(s) to clipboard.";
+                Summary.ProgressText = $"Copied {paths.Count:N0} path(s) to clipboard.";
             }
             else
             {
