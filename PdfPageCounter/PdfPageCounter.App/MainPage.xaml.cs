@@ -2,6 +2,7 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using PdfPageCounter.Core.Models;
 using PdfPageCounter_App.Services;
 using PdfPageCounter_App.ViewModels;
 using Windows.Storage.Pickers;
@@ -119,6 +120,22 @@ public sealed partial class MainPage : Page
         if (args.InvokedItem is FolderNodeViewModel vm)
         {
             _viewModel.SelectedFolder = vm;
+        }
+    }
+
+    private void OriginalTag_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.DataContext is PdfFileRecord record)
+        {
+            _viewModel.CopyCounterpartPath(record, fromOriginal: true);
+        }
+    }
+
+    private void DuplicateTag_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.DataContext is PdfFileRecord record)
+        {
+            _viewModel.CopyCounterpartPath(record, fromOriginal: false);
         }
     }
 }

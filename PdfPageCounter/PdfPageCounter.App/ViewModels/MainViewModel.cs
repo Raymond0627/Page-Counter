@@ -5,6 +5,7 @@ using Microsoft.UI.Dispatching;
 using PdfPageCounter.Core.Models;
 using PdfPageCounter.Core.Services;
 using PdfPageCounter_App.Services;
+using Windows.ApplicationModel.DataTransfer;
 
 namespace PdfPageCounter_App.ViewModels;
 
@@ -318,6 +319,49 @@ public sealed partial class MainViewModel : ObservableObject
         CanIsolate = IsolatableFileCount > 0;
         CanRevert = _isolator.CanRevert(root.FullPath);
         CurrentIsolationRoot = root.FullPath;
+    }
+
+    /// <summary>
+    /// Copies the path of the counterpart(s) of <paramref name="record"/> to the
+    /// clipboard: its kept original when the file is a duplicate, or all of its
+    /// duplicate copies when it is the original. Multiple paths are newline-joined.
+    /// </summary>
+    public void CopyCounterpartPath(PdfFileRecord record, bool fromOriginal)
+    {
+        var groups = _duplicateDetector.GetDuplicateGroups();
+
+        foreach (var group in groups)
+        {
+            var isMember = group.Any(m =>
+                string.Equals(m.FullPath, record.FullPath, StringComparison.OrdinalIgnoreCase));
+            if (!isMember)
+            {
+                continue;
+            }
+
+            var counterparts = group
+                .Where(m => fromOriginal ? m.IsOriginal : m.IsDuplicate)
+                .Select(m => m.FullPath)
+                .Where(p => !string.IsNullOrEmpty(p))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (counterparts.Count == 0)
+            {
+                Summary.ProgressText = "No counterpart found to copy.";
+                return;
+            }
+
+            var data = new DataPackage();
+            data.SetText(string.Join(Environment.NewLine, counterparts));
+            Clipboard.SetContent(data);
+            Clipboard.Flush();
+
+            Summary.ProgressText = $"Copied {counterparts.Count:N0} path(s) to clipboard.";
+            return;
+        }
+
+        Summary.ProgressText = "This file is not part of a duplicate group.";
     }
 
     public void BrowseSelected(string? folderPath)
