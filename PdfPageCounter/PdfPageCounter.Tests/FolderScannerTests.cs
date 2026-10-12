@@ -326,6 +326,42 @@ public class FolderScannerTests : IDisposable
         }
     }
 
+    [Fact]
+    public async Task Scan_ExcludesRootDuplicatesFolder()
+    {
+        Directory.CreateDirectory(Path.Combine(_tempRoot, "duplicates"));
+        CreatePdf(Path.Combine(_tempRoot, "duplicates", "dup.pdf"), 2);
+        CreatePdf(Path.Combine(_tempRoot, "keep.pdf"), 3);
+
+        var scanner = CreateScanner(out _);
+        var root = await scanner.ScanAsync(_tempRoot, CancellationToken.None);
+
+        // The isolation folder is excluded, so isolated copies never re-count.
+        Assert.Equal(1L, root.TotalFileCount);
+        Assert.Equal(3L, root.TotalPageCount);
+        Assert.DoesNotContain(root.Children, c => c.Name == "duplicates");
+    }
+
+    [Fact]
+    public async Task Scan_CancellationDuringDiscovery_ReturnsPartialPromptly()
+    {
+        var gate = new GateLister();
+        var scanner = new FolderScanner(new PdfPageCounterService(), new DuplicateDetector(), lister: gate);
+        using var cts = new CancellationTokenSource();
+
+        var scan = scanner.ScanAsync(_tempRoot, cts.Token);
+
+        Assert.True(gate.Entered.Wait(TimeSpan.FromSeconds(15)), "discovery never started");
+        cts.Cancel();
+        gate.Release.Set();
+
+        var completed = await Task.WhenAny(scan, Task.Delay(TimeSpan.FromSeconds(30)));
+        Assert.Same(scan, completed);
+
+        var root = await scan; // must not throw even though cancelled mid-discovery
+        Assert.NotNull(root);
+    }
+
     private static FolderNode AssertSingle(FolderNode parent, string name)
     {
         var matches = parent.Children.Where(c => c.Name == name).ToList();
@@ -380,5 +416,20 @@ public class FolderScannerTests : IDisposable
         // Reports a child directory that does not exist on disk.
         public DirectoryListing List(string directory) =>
             new(new[] { Path.Combine(_root, "ghost") }, Array.Empty<string>());
+    }
+
+    private sealed class GateLister : IDirectoryLister
+    {
+        public ManualResetEventSlim Entered { get; } = new(false);
+
+        public ManualResetEventSlim Release { get; } = new(false);
+
+        // Blocks the first listing so the test can cancel mid-discovery.
+        public DirectoryListing List(string directory)
+        {
+            Entered.Set();
+            Release.Wait();
+            return new(Array.Empty<string>(), Array.Empty<string>());
+        }
     }
 }

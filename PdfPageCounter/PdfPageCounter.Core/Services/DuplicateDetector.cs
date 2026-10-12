@@ -5,12 +5,12 @@ namespace PdfPageCounter.Core.Services;
 /// <summary>
 /// Detects duplicate PDFs across the ENTIRE scanned tree (global scope).
 /// Two files are considered duplicates if they share the same filename
-/// (case-insensitive) AND the same page count.
+/// (case-insensitive) AND the same page count AND the same size in bytes.
 /// </summary>
 public sealed class DuplicateDetector
 {
-    // Key = (lowercase filename, page count). Case-insensitive by design.
-    private readonly Dictionary<(string, int), List<PdfFileRecord>> _groups = new();
+    // Key = (lowercase filename, page count, size). Case-insensitive by design.
+    private readonly Dictionary<(string, int, long), List<PdfFileRecord>> _groups = new();
     private readonly object _sync = new();
 
     private long _nextGroupId = 0;
@@ -27,7 +27,7 @@ public sealed class DuplicateDetector
             return;
         }
 
-        var key = (record.Name.ToLowerInvariant(), record.PageCount);
+        var key = (record.Name.ToLowerInvariant(), record.PageCount, record.Size);
         lock (_sync)
         {
             if (!_groups.TryGetValue(key, out var list))
@@ -78,6 +78,20 @@ public sealed class DuplicateDetector
                 member.DuplicateGroupId = id;
             }
         }
+    }
+
+    /// <summary>
+    /// Returns a snapshot of every duplicate group (2+ members) after Resolve(),
+    /// each as a list of its member records. Used to isolate or inspect duplicates.
+    /// </summary>
+    public IReadOnlyList<IReadOnlyList<PdfFileRecord>> GetDuplicateGroups()
+    {
+        List<List<PdfFileRecord>> groups;
+        lock (_sync)
+        {
+            groups = _groups.Values.Where(g => g.Count >= 2).ToList();
+        }
+        return groups;
     }
 
     /// <summary>
