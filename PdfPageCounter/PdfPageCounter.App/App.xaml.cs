@@ -64,6 +64,9 @@ public partial class App : Application
     {
         try
         {
+            // Run one-time settings migrations before any UI reads the settings.
+            new SettingsStore().Migrate();
+
             _window = new MainWindow();
             MainAppWindow = _window;
             ThemeManager.ApplyCaptionButtons();

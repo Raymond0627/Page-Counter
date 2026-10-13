@@ -14,6 +14,10 @@ public sealed partial class MainPage : Page
 {
     private readonly MainViewModel _viewModel;
 
+    // Suppresses the theme handler while the radio buttons are initialized from
+    // the saved theme, so startup does not re-save settings.
+    private bool _applyingInitialTheme = true;
+
     public MainPage()
     {
         InitializeComponent();
@@ -36,6 +40,7 @@ public sealed partial class MainPage : Page
             }
         };
         UpdateCardColumnVisibilities();
+        _applyingInitialTheme = false;
     }
 
     private void UpdateCardColumnVisibilities()
@@ -95,6 +100,11 @@ public sealed partial class MainPage : Page
 
     private void ThemeRadio_Checked(object sender, RoutedEventArgs e)
     {
+        if (_applyingInitialTheme)
+        {
+            return;
+        }
+
         if (sender is RadioButton { Tag: string tag } &&
             Enum.TryParse<AppTheme>(tag, out var theme))
         {

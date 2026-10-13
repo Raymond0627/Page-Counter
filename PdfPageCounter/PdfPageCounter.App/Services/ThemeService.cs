@@ -75,7 +75,12 @@ public sealed class ThemeService
     public void SetTheme(AppTheme theme)
     {
         Current = theme;
-        _store.Save(new AppSettings { Theme = theme.ToString() });
+
+        // Preserve every other setting: load, change only the theme, save.
+        var settings = _store.Load();
+        settings.Theme = theme.ToString();
+        _store.Save(settings);
+
         ApplyCaptionButtons();
         Changed?.Invoke();
     }
