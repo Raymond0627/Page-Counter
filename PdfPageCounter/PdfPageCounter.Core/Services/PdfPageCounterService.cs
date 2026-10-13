@@ -9,6 +9,13 @@ namespace PdfPageCounter.Core.Services;
 /// </summary>
 public sealed class PdfPageCounterService
 {
+    private readonly PageCountCache? _cache;
+
+    public PdfPageCounterService(PageCountCache? cache = null)
+    {
+        _cache = cache;
+    }
+
     /// <summary>
     /// Attempts to read the number of pages in the PDF at <paramref name="filePath"/>.
     /// Returns the page count on success, or -1 with an error message on failure.
@@ -21,8 +28,8 @@ public sealed class PdfPageCounterService
 
     /// <summary>
     /// Like <see cref="TryGetPageCount"/> but also returns the file size, so
-    /// callers avoid a second stat. PdfPig's own reader (random-access friendly)
-    /// opens the file, keeping bulk scans as fast as possible.
+    /// callers avoid a second stat. Reuses the shared cache when the file has not
+    /// changed (size + last-write), so repeated scans do not re-parse PDFs.
     /// </summary>
     public (int PageCount, long Size, string? ErrorMessage) TryGetPageCountWithSize(string filePath)
     {
@@ -39,8 +46,16 @@ public sealed class PdfPageCounterService
                 return (-1, 0, "File is zero bytes.");
             }
 
+            var lastWrite = info.LastWriteTimeUtc.Ticks;
+            if (_cache is not null && _cache.TryGet(filePath, info.Length, lastWrite, out var cached))
+            {
+                return (cached, info.Length, null);
+            }
+
             using var document = PdfDocument.Open(filePath);
-            return (document.NumberOfPages, info.Length, null);
+            var pages = document.NumberOfPages;
+            _cache?.Store(filePath, info.Length, lastWrite, pages);
+            return (pages, info.Length, null);
         }
         catch (Exception ex)
         {

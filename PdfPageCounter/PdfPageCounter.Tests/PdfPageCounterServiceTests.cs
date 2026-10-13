@@ -88,4 +88,36 @@ public class PdfPageCounterServiceTests : IDisposable
         Assert.Equal(-1, count);
         Assert.NotNull(error);
     }
+
+    [Fact]
+    public void SharedCache_SecondService_ReturnsSamePages()
+    {
+        var cache = new PageCountCache();
+        var path = TempFile("cached.pdf");
+        CreateValidPdf(path, 3);
+
+        var cold = new PdfPageCounterService(cache);
+        var warm = new PdfPageCounterService(cache);
+
+        Assert.Equal(3, cold.TryGetPageCount(path).PageCount);
+        // Same file, unchanged: warm service must reuse the cached count.
+        Assert.Equal(3, warm.TryGetPageCount(path).PageCount);
+        Assert.Equal(3, cold.TryGetPageCount(path).PageCount);
+    }
+
+    [Fact]
+    public void SharedCache_Recomputes_WhenFileChanges()
+    {
+        var cache = new PageCountCache();
+        var path = TempFile("changing.pdf");
+        CreateValidPdf(path, 2);
+
+        var svc = new PdfPageCounterService(cache);
+        Assert.Equal(2, svc.TryGetPageCount(path).PageCount);
+
+        // Touch the file: last-write changes, so the cache must not be trusted
+        // blindly and the count stays correct.
+        File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddSeconds(5));
+        Assert.Equal(2, svc.TryGetPageCount(path).PageCount);
+    }
 }

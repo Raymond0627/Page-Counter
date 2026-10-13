@@ -130,4 +130,44 @@ public sealed partial class MainPage : Page
             _viewModel.CopyGroupPaths(record);
         }
     }
+
+    private async void BoxBrowseButton_Click(object sender, RoutedEventArgs e)
+    {
+        var picker = new FolderPicker();
+        picker.FileTypeFilter.Add("*");
+
+        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(App.MainAppWindow!);
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+
+        var folder = await picker.PickSingleFolderAsync();
+        if (folder != null)
+        {
+            _viewModel.Boxes.BrowseSelected(folder.Path);
+        }
+    }
+
+    private void BoxPathTextBox_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key == Windows.System.VirtualKey.Enter && _viewModel.Boxes.ScanBoxesCommand.CanExecute(null))
+        {
+            _viewModel.Boxes.ScanBoxesCommand.Execute(null);
+        }
+    }
+
+    private async void BoxExportButton_Click(object sender, RoutedEventArgs e)
+    {
+        var picker = new FileSavePicker();
+        picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+        picker.FileTypeChoices.Add("Excel Workbook", new List<string> { ".xlsx" });
+        picker.SuggestedFileName = $"BoxCounts-{DateTime.Now:yyyyMMdd-HHmm}";
+
+        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(App.MainAppWindow!);
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+
+        var file = await picker.PickSaveFileAsync();
+        if (file != null)
+        {
+            await _viewModel.Boxes.ExportToAsync(file.Path);
+        }
+    }
 }

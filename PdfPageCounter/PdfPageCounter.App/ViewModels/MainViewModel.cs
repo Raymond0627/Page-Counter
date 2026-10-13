@@ -40,6 +40,8 @@ public sealed partial class MainViewModel : ObservableObject
 
     public SettingsViewModel Settings { get; } = new(new SettingsStore());
 
+    public BoxCountViewModel Boxes { get; }
+
     public ObservableCollection<FolderNodeViewModel> TreeRoots { get; } = new();
 
     public ObservableCollection<PdfFileRecord> SelectedFolderFiles { get; } = new();
@@ -77,9 +79,10 @@ public sealed partial class MainViewModel : ObservableObject
     public MainViewModel(DispatcherQueue dispatcher)
     {
         _dispatcher = dispatcher;
-        _pageCounter = new PdfPageCounterService();
+        _pageCounter = new PdfPageCounterService(new PageCountCache());
         _duplicateDetector = new DuplicateDetector();
         _scanner = new FolderScanner(_pageCounter, _duplicateDetector);
+        Boxes = new BoxCountViewModel(dispatcher, _pageCounter);
 
         _scanner.Progress += OnScanProgress;
         _scanner.FileProcessed += OnFileProcessed;
