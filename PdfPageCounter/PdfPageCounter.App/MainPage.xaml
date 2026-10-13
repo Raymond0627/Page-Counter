@@ -281,11 +281,12 @@
 
                         <StackPanel Spacing="4">
                             <TextBlock Text="Duplicates" Style="{StaticResource SettingsSectionHeaderStyle}" />
-                            <CheckBox Content="Ignore file name (match by page count + file size only)"
-                                      IsChecked="{Binding Settings.IgnoreFileName, Mode=TwoWay}" />
-                            <TextBlock Text="Unchecked: duplicates must match file name + page count + file size. Checked: renamed copies with the same page count and size also count. Applies on the next scan."
+                            <TextBlock Text="Which attributes must match for two PDFs to count as duplicates. Check any combination (1, 2, or 3). If none are checked, nothing is treated as a duplicate. Applies on the next scan."
                                        TextWrapping="Wrap"
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <CheckBox Content="File name" IsChecked="{Binding Settings.MatchFileName, Mode=TwoWay}" />
+                            <CheckBox Content="Page count" IsChecked="{Binding Settings.MatchPageCount, Mode=TwoWay}" />
+                            <CheckBox Content="File size" IsChecked="{Binding Settings.MatchFileSize, Mode=TwoWay}" />
                         </StackPanel>
 
                         <StackPanel Spacing="4">

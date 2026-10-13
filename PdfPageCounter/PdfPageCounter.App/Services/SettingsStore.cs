@@ -16,8 +16,14 @@ public sealed class AppSettings
     /// <summary>Show the "Duplicate Pages" summary card.</summary>
     public bool ShowDuplicatePages { get; set; }
 
-    /// <summary>Match duplicates on page count + size only (ignore filename).</summary>
-    public bool IgnoreFileName { get; set; }
+    /// <summary>Match duplicates on file name.</summary>
+    public bool MatchFileName { get; set; } = true;
+
+    /// <summary>Match duplicates on page count.</summary>
+    public bool MatchPageCount { get; set; } = true;
+
+    /// <summary>Match duplicates on file size.</summary>
+    public bool MatchFileSize { get; set; } = true;
 
     /// <summary>Re-scan the same root automatically after isolating or reverting.</summary>
     public bool AutoRescanAfterIsolate { get; set; } = true;

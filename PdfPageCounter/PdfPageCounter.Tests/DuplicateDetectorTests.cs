@@ -221,9 +221,9 @@ public class DuplicateDetectorTests
     }
 
     [Fact]
-    public void IgnoreFileName_MatchesDifferentNames_SamePagesAndSize()
+    public void OnlyPagesAndSize_MatchesDifferentNames()
     {
-        var detector = new DuplicateDetector { IgnoreFileName = true };
+        var detector = new DuplicateDetector { MatchFileName = false };
         var r1 = Rec("a.pdf", 10, @"C:\a.pdf");
         r1.Size = 100;
         var r2 = Rec("b.pdf", 10, @"C:\sub\b.pdf");
@@ -238,29 +238,57 @@ public class DuplicateDetectorTests
     }
 
     [Fact]
-    public void IgnoreFileName_DifferentSize_NotDuplicates()
+    public void OnlyNameAndSize_MatchesDifferentPageCounts()
     {
-        var detector = new DuplicateDetector { IgnoreFileName = true };
+        var detector = new DuplicateDetector { MatchPageCount = false };
         var r1 = Rec("a.pdf", 10, @"C:\a.pdf");
         r1.Size = 100;
-        var r2 = Rec("b.pdf", 10, @"C:\sub\b.pdf");
+        var r2 = Rec("a.pdf", 8, @"C:\sub\a.pdf");
+        r2.Size = 100;
+        detector.Add(r1);
+        detector.Add(r2);
+        detector.Resolve();
+
+        Assert.Equal(1, detector.DuplicateFileCount());
+    }
+
+    [Fact]
+    public void OnlyNameAndPages_MatchesDifferentSizes()
+    {
+        var detector = new DuplicateDetector { MatchFileSize = false };
+        var r1 = Rec("a.pdf", 10, @"C:\a.pdf");
+        r1.Size = 100;
+        var r2 = Rec("a.pdf", 10, @"C:\sub\a.pdf");
         r2.Size = 200;
         detector.Add(r1);
         detector.Add(r2);
         detector.Resolve();
 
-        Assert.False(r1.IsDuplicate);
-        Assert.False(r2.IsDuplicate);
-        Assert.Equal(0, detector.DuplicateFileCount());
+        Assert.Equal(1, detector.DuplicateFileCount());
     }
 
     [Fact]
-    public void IgnoreFileName_DifferentPages_NotDuplicates()
+    public void SingleAttribute_SizeOnly_GroupsBySize()
     {
-        var detector = new DuplicateDetector { IgnoreFileName = true };
+        var detector = new DuplicateDetector { MatchFileName = false, MatchPageCount = false };
         var r1 = Rec("a.pdf", 10, @"C:\a.pdf");
         r1.Size = 100;
         var r2 = Rec("b.pdf", 8, @"C:\sub\b.pdf");
+        r2.Size = 100;
+        detector.Add(r1);
+        detector.Add(r2);
+        detector.Resolve();
+
+        Assert.Equal(1, detector.DuplicateFileCount());
+    }
+
+    [Fact]
+    public void NoAttributes_NoDuplicates()
+    {
+        var detector = new DuplicateDetector { MatchFileName = false, MatchPageCount = false, MatchFileSize = false };
+        var r1 = Rec("a.pdf", 10, @"C:\a.pdf");
+        r1.Size = 100;
+        var r2 = Rec("a.pdf", 10, @"C:\sub\a.pdf");
         r2.Size = 100;
         detector.Add(r1);
         detector.Add(r2);

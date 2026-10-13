@@ -4,26 +4,29 @@ namespace PdfPageCounter.Core.Services;
 
 /// <summary>
 /// Detects duplicate PDFs across the ENTIRE scanned tree (global scope).
-/// By default two files are duplicates when they share the same filename
-/// (case-insensitive), page count, and size in bytes. When
-/// <see cref="IgnoreFileName"/> is set, the filename is disregarded and files
-/// match on page count + size alone.
+/// Which attributes must match is configurable: any combination of file name,
+/// page count, and file size. Two files are duplicates when they match on every
+/// enabled attribute. If no attribute is enabled, nothing is treated as a
+/// duplicate.
 /// </summary>
 public sealed class DuplicateDetector
 {
-    // Key = (name key, page count, size). Name key is lowercase name, or "" when
-    // IgnoreFileName is set. Case-insensitive by design.
+    // Key = (name key, page count key, size key). Each component is the real
+    // value when its attribute is enabled, or a neutral constant when disabled,
+    // so a disabled attribute never distinguishes groups.
     private readonly Dictionary<(string, int, long), List<PdfFileRecord>> _groups = new();
     private readonly object _sync = new();
 
     private long _nextGroupId = 0;
 
-    /// <summary>
-    /// When true, files match on page count + size only (filename ignored).
-    /// When false (default), filename + page count + size must all match.
-    /// Set this before scanning; it takes effect on the next scan.
-    /// </summary>
-    public bool IgnoreFileName { get; set; }
+    /// <summary>Match on file name (case-insensitive). Default true.</summary>
+    public bool MatchFileName { get; set; } = true;
+
+    /// <summary>Match on page count. Default true.</summary>
+    public bool MatchPageCount { get; set; } = true;
+
+    /// <summary>Match on file size in bytes. Default true.</summary>
+    public bool MatchFileSize { get; set; } = true;
 
     /// <summary>
     /// Registers a successfully-parsed file record for duplicate matching.
@@ -37,8 +40,16 @@ public sealed class DuplicateDetector
             return;
         }
 
-        var nameKey = IgnoreFileName ? string.Empty : record.Name.ToLowerInvariant();
-        var key = (nameKey, record.PageCount, record.Size);
+        if (!MatchFileName && !MatchPageCount && !MatchFileSize)
+        {
+            return;
+        }
+
+        var key = (
+            MatchFileName ? record.Name.ToLowerInvariant() : string.Empty,
+            MatchPageCount ? record.PageCount : -1,
+            MatchFileSize ? record.Size : -1L);
+
         lock (_sync)
         {
             if (!_groups.TryGetValue(key, out var list))

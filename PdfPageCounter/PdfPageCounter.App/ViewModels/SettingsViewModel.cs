@@ -18,7 +18,9 @@ public sealed partial class SettingsViewModel : ObservableObject
         ShowDuplicateCount = saved.ShowDuplicateCount;
         ShowUniquePageCount = saved.ShowUniquePageCount;
         ShowDuplicatePages = saved.ShowDuplicatePages;
-        IgnoreFileName = saved.IgnoreFileName;
+        MatchFileName = saved.MatchFileName;
+        MatchPageCount = saved.MatchPageCount;
+        MatchFileSize = saved.MatchFileSize;
         AutoRescanAfterIsolate = saved.AutoRescanAfterIsolate;
     }
 
@@ -32,7 +34,13 @@ public sealed partial class SettingsViewModel : ObservableObject
     private bool _showDuplicatePages;
 
     [ObservableProperty]
-    private bool _ignoreFileName;
+    private bool _matchFileName = true;
+
+    [ObservableProperty]
+    private bool _matchPageCount = true;
+
+    [ObservableProperty]
+    private bool _matchFileSize = true;
 
     [ObservableProperty]
     private bool _autoRescanAfterIsolate = true;
@@ -43,7 +51,11 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     partial void OnShowDuplicatePagesChanged(bool value) => Save();
 
-    partial void OnIgnoreFileNameChanged(bool value) => Save();
+    partial void OnMatchFileNameChanged(bool value) => Save();
+
+    partial void OnMatchPageCountChanged(bool value) => Save();
+
+    partial void OnMatchFileSizeChanged(bool value) => Save();
 
     partial void OnAutoRescanAfterIsolateChanged(bool value) => Save();
 
@@ -53,7 +65,9 @@ public sealed partial class SettingsViewModel : ObservableObject
         settings.ShowDuplicateCount = ShowDuplicateCount;
         settings.ShowUniquePageCount = ShowUniquePageCount;
         settings.ShowDuplicatePages = ShowDuplicatePages;
-        settings.IgnoreFileName = IgnoreFileName;
+        settings.MatchFileName = MatchFileName;
+        settings.MatchPageCount = MatchPageCount;
+        settings.MatchFileSize = MatchFileSize;
         settings.AutoRescanAfterIsolate = AutoRescanAfterIsolate;
         _store.Save(settings);
     }
