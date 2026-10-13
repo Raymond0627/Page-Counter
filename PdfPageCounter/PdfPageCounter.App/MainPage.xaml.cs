@@ -25,6 +25,72 @@ public sealed partial class MainPage : Page
         ThemeSystem.IsChecked = current == AppTheme.System;
         ThemeLight.IsChecked = current == AppTheme.Light;
         ThemeDark.IsChecked = current == AppTheme.Dark;
+
+        _viewModel.Settings.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(_viewModel.Settings.ShowDuplicateCount) or
+                                  nameof(_viewModel.Settings.ShowDuplicatePages) or
+                                  nameof(_viewModel.Settings.ShowUniquePageCount))
+            {
+                UpdateCardColumnVisibilities();
+            }
+        };
+        UpdateCardColumnVisibilities();
+    }
+
+    private void UpdateCardColumnVisibilities()
+    {
+        if (CardColDuplicateFiles != null)
+            CardColDuplicateFiles.Width = _viewModel.Settings.ShowDuplicateCount ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
+        if (CardColDuplicatePages != null)
+            CardColDuplicatePages.Width = _viewModel.Settings.ShowDuplicatePages ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
+        if (CardColUniquePages != null)
+            CardColUniquePages.Width = _viewModel.Settings.ShowUniquePageCount ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
+    }
+
+    // Interactive Drag-to-Resize Splitter for Folder Pane
+    private bool _isDraggingSplitter;
+    private double _dragStartPointerX;
+    private double _dragStartColumnWidth;
+
+    private void FolderSplitter_PointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        var pt = e.GetCurrentPoint(this);
+        if (pt.Properties.IsLeftButtonPressed)
+        {
+            _isDraggingSplitter = true;
+            _dragStartPointerX = pt.Position.X;
+            _dragStartColumnWidth = FolderColumn.ActualWidth;
+            ((UIElement)sender).CapturePointer(e.Pointer);
+            e.Handled = true;
+        }
+    }
+
+    private void FolderSplitter_PointerMoved(object sender, PointerRoutedEventArgs e)
+    {
+        if (_isDraggingSplitter)
+        {
+            var currentX = e.GetCurrentPoint(this).Position.X;
+            var delta = currentX - _dragStartPointerX;
+            var newWidth = Math.Clamp(_dragStartColumnWidth + delta, FolderColumn.MinWidth, FolderColumn.MaxWidth);
+            FolderColumn.Width = new GridLength(newWidth);
+            e.Handled = true;
+        }
+    }
+
+    private void FolderSplitter_PointerReleased(object sender, PointerRoutedEventArgs e)
+    {
+        if (_isDraggingSplitter)
+        {
+            _isDraggingSplitter = false;
+            ((UIElement)sender).ReleasePointerCapture(e.Pointer);
+            e.Handled = true;
+        }
+    }
+
+    private void FolderSplitter_PointerCaptureLost(object sender, PointerRoutedEventArgs e)
+    {
+        _isDraggingSplitter = false;
     }
 
     private void ThemeRadio_Checked(object sender, RoutedEventArgs e)

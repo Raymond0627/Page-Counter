@@ -8,13 +8,13 @@ public sealed class AppSettings
     public string Theme { get; set; } = "System";
 
     /// <summary>Show the "Duplicate Files" summary card.</summary>
-    public bool ShowDuplicateCount { get; set; }
+    public bool ShowDuplicateCount { get; set; } = true;
 
     /// <summary>Show the "Unique Pages" summary card.</summary>
-    public bool ShowUniquePageCount { get; set; }
+    public bool ShowUniquePageCount { get; set; } = true;
 
     /// <summary>Show the "Duplicate Pages" summary card.</summary>
-    public bool ShowDuplicatePages { get; set; }
+    public bool ShowDuplicatePages { get; set; } = true;
 
     /// <summary>Match duplicates on file name.</summary>
     public bool MatchFileName { get; set; } = true;

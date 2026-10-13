@@ -13,8 +13,8 @@
     <Page.Resources>
         <Style x:Key="SummaryCardStyle" TargetType="Border">
             <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
-            <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="Padding" Value="16,12" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="14,12" />
             <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
@@ -24,320 +24,360 @@
             <Setter Property="Margin" Value="0,0,0,4" />
         </Style>
         <Style x:Key="TagButtonStyle" TargetType="Button">
-            <Setter Property="Padding" Value="6,1" />
+            <Setter Property="Padding" Value="6,2" />
             <Setter Property="MinHeight" Value="0" />
             <Setter Property="MinWidth" Value="0" />
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="FontSize" Value="11" />
-            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="CornerRadius" Value="6" />
         </Style>
     </Page.Resources>
 
-    <TabView IsAddTabButtonVisible="False" TabWidthMode="SizeToContent"
+    <TabView x:Name="RootTabs" IsAddTabButtonVisible="False" TabWidthMode="SizeToContent"
              Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
         <TabView.TabItems>
 
             <!-- ======================= Scan tab ======================= -->
             <TabViewItem Header="Scan">
-                <Grid Padding="4">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
+                <TabViewItem.IconSource>
+                    <FontIconSource Glyph="&#xE721;" />
+                </TabViewItem.IconSource>
+                <Grid Margin="12,6,12,12">
+                    <Grid.ColumnDefinitions>
+                        <!-- Column 0: Folders pane (Adjustable via Splitter) -->
+                        <ColumnDefinition x:Name="FolderColumn" Width="400" MinWidth="220" MaxWidth="750" />
+                        <!-- Column 1: Draggable Splitter -->
+                        <ColumnDefinition Width="10" />
+                        <!-- Column 2: Dashboard Content -->
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
 
-                    <!-- Top bar -->
-                    <Border Grid.Row="0" Padding="12,8" CornerRadius="8"
+                    <!-- Left: Folders Pane -->
+                    <Border Grid.Column="0" Padding="10" CornerRadius="10"
                             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                        <StackPanel Spacing="8">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Button x:Name="BrowseButton" Content="Browse Local…"
-                                        Click="BrowseButton_Click" />
-                                <TextBox x:Name="PathTextBox" Width="380" PlaceholderText="Path or \\server\share\folder"
-                                         Text="{Binding NetworkPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                         KeyDown="PathTextBox_KeyDown" />
-                                <Button Content="Scan" Style="{StaticResource AccentButtonStyle}"
-                                        Command="{Binding ScanCommand}" />
-                                <Button Content="Cancel"
-                                        Command="{Binding CancelCommand}"
-                                        Visibility="{Binding Summary.IsScanning, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}" />
-                            </StackPanel>
-                            <TextBlock Text="{Binding CurrentRoot, FallbackValue='(no folder selected)'}"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                       TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Error banner -->
-                    <InfoBar x:Name="ErrorInfoBar" Grid.Row="1"
-                             Severity="Error" IsOpen="{Binding HasError}"
-                             Title="{Binding ErrorMessage}"
-                             Margin="12,8,12,0" />
-
-                    <!-- Cancelled banner -->
-                    <InfoBar Grid.Row="1" Severity="Warning" IsOpen="{Binding Summary.ShowCancelledBanner}"
-                             Title="Scan cancelled — results are partial."
-                             Margin="12,8,12,0" />
-
-                    <!-- Main content -->
-                    <Grid Grid.Row="2" Margin="12,8,12,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="380" />
-                            <ColumnDefinition Width="12" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-
-                        <!-- Left: Folder tree -->
-                        <Border Grid.Column="0" Padding="8" CornerRadius="8"
-                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                            <Grid RowSpacing="8">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="*" />
-                                </Grid.RowDefinitions>
-                                <TextBlock Text="Folders" FontWeight="SemiBold" Margin="4,0,0,4" />
-                                <TreeView x:Name="FolderTree"
-                                          Grid.Row="1"
-                                          ItemsSource="{Binding TreeRoots}"
-                                          SelectionMode="Single"
-                                          ItemInvoked="FolderTree_ItemInvoked">
-                                    <TreeView.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:FolderNodeViewModel">
-                                            <TreeViewItem ItemsSource="{x:Bind Children}">
-                                                <TreeViewItem.Content>
-                                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                                        <FontIcon Glyph="&#xE8B7;" FontSize="14" />
-                                                        <TextBlock Text="{x:Bind DisplayLabel, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
-                                                        <Border Background="{ThemeResource AccentFillColorDefaultBrush}"
-                                                                CornerRadius="8" Padding="6,1"
-                                                                Visibility="{x:Bind HasBadge, Mode=OneWay}">
-                                                            <TextBlock Text="{x:Bind BadgeText, Mode=OneWay}" Foreground="White"
-                                                                       FontSize="11" FontWeight="SemiBold" />
-                                                        </Border>
-                                                    </StackPanel>
-                                                </TreeViewItem.Content>
-                                            </TreeViewItem>
-                                        </DataTemplate>
-                                    </TreeView.ItemTemplate>
-                                </TreeView>
-                            </Grid>
-                        </Border>
-
-                        <!-- Right: Summary and file detail -->
-                        <Grid Grid.Column="2" RowSpacing="12">
+                        <Grid RowSpacing="10">
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
-
-                            <!-- Scope indicator -->
-                            <TextBlock Grid.Row="0" Text="{Binding Summary.ScopeText}"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                       TextTrimming="CharacterEllipsis"
-                                       Visibility="{Binding Summary.HasScope, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                       ToolTipService.ToolTip="{Binding Summary.ScopeText}" />
-
-                            <!-- Summary cards (Pages/Files always; Duplicates/Unique per settings) -->
-                            <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="6">
-                                <Border MinWidth="150" Style="{StaticResource SummaryCardStyle}">
-                                    <StackPanel>
-                                        <TextBlock Text="Total Pages" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                        <TextBlock FontSize="26" FontWeight="Bold" Text="{Binding Summary.TotalPagesText}" />
-                                    </StackPanel>
-                                </Border>
-                                <Border MinWidth="150" Style="{StaticResource SummaryCardStyle}">
-                                    <StackPanel>
-                                        <TextBlock Text="Total Files" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                        <TextBlock FontSize="26" FontWeight="Bold" Text="{Binding Summary.TotalFilesText}" />
-                                    </StackPanel>
-                                </Border>
-                                <Border MinWidth="150" Style="{StaticResource SummaryCardStyle}"
-                                        Visibility="{Binding Settings.ShowDuplicateCount, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <StackPanel>
-                                        <TextBlock Text="Duplicate Files" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                        <TextBlock FontSize="26" FontWeight="Bold" Text="{Binding Summary.DuplicateFileCountText}" />
-                                    </StackPanel>
-                                </Border>
-                                <Border MinWidth="150" Style="{StaticResource SummaryCardStyle}"
-                                        Visibility="{Binding Settings.ShowDuplicatePages, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <StackPanel>
-                                        <TextBlock Text="Duplicate Pages" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                        <TextBlock FontSize="26" FontWeight="Bold" Text="{Binding Summary.DuplicatePagesText}" />
-                                    </StackPanel>
-                                </Border>
-                                <Border MinWidth="150" Style="{StaticResource SummaryCardStyle}"
-                                        Visibility="{Binding Settings.ShowUniquePageCount, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                    <StackPanel>
-                                        <TextBlock Text="Unique Pages" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                        <TextBlock FontSize="26" FontWeight="Bold" Text="{Binding Summary.UniquePageTotalText}" />
-                                    </StackPanel>
-                                </Border>
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="4,2,0,2">
+                                <FontIcon Glyph="&#xE8B7;" FontSize="16" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+                                <TextBlock Text="Folders" FontWeight="SemiBold" FontSize="15" />
                             </StackPanel>
+                            <TreeView x:Name="FolderTree"
+                                      Grid.Row="1"
+                                      ItemsSource="{Binding TreeRoots}"
+                                      SelectionMode="Single"
+                                      ItemInvoked="FolderTree_ItemInvoked">
+                                <TreeView.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:FolderNodeViewModel">
+                                        <TreeViewItem ItemsSource="{x:Bind Children}">
+                                            <TreeViewItem.Content>
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <FontIcon Glyph="&#xE8B7;" FontSize="14" Foreground="#F59E0B" />
+                                                    <TextBlock Text="{x:Bind DisplayLabel, Mode=OneWay}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                    <Border Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                                            CornerRadius="8" Padding="6,1"
+                                                            Visibility="{x:Bind HasBadge, Mode=OneWay}">
+                                                        <TextBlock Text="{x:Bind BadgeText, Mode=OneWay}" Foreground="White"
+                                                                   FontSize="11" FontWeight="SemiBold" />
+                                                    </Border>
+                                                </StackPanel>
+                                            </TreeViewItem.Content>
+                                        </TreeViewItem>
+                                    </DataTemplate>
+                                </TreeView.ItemTemplate>
+                            </TreeView>
+                        </Grid>
+                    </Border>
 
-                            <!-- Scanning status -->
-                            <StackPanel Grid.Row="2" Spacing="4">
-                                <ProgressBar IsIndeterminate="True"
-                                             Visibility="{Binding Summary.IsScanning, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                             Maximum="100" />
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock Text="{Binding Summary.ScanningLabel}" FontWeight="SemiBold"
-                                               Visibility="{Binding Summary.IsScanning, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                    <TextBlock Text="{Binding Summary.ProgressText}"
-                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                </StackPanel>
+                    <!-- Splitter Bar (Left-Click Hold and Drag Left to Right) -->
+                    <local:SplitterControl Grid.Column="1"
+                            x:Name="FolderSplitter"
+                            Background="Transparent"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"
+                            HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Stretch"
+                            PointerPressed="FolderSplitter_PointerPressed"
+                            PointerMoved="FolderSplitter_PointerMoved"
+                            PointerReleased="FolderSplitter_PointerReleased"
+                            PointerCaptureLost="FolderSplitter_PointerCaptureLost"
+                            ToolTipService.ToolTip="Hold and drag left or right to resize folder pane">
+                        <Rectangle Width="2" HorizontalAlignment="Center" VerticalAlignment="Stretch"
+                                   Fill="{ThemeResource CardStrokeColorDefaultBrush}"
+                                   RadiusX="1" RadiusY="1" />
+                    </local:SplitterControl>
+
+                    <!-- Right: Dashboard Area -->
+                    <Grid Grid.Column="2" RowSpacing="10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" /> <!-- Row 0: Top Search / Path Bar -->
+                            <RowDefinition Height="Auto" /> <!-- Row 1: Error & Cancelled Banners -->
+                            <RowDefinition Height="Auto" /> <!-- Row 2: Selected Folder Breadcrumb Bar -->
+                            <RowDefinition Height="Auto" /> <!-- Row 3: 5 Responsive Summary Cards -->
+                            <RowDefinition Height="Auto" /> <!-- Row 4: Status line & Progress bar -->
+                            <RowDefinition Height="*" />    <!-- Row 5: Files in Selected Folder Table -->
+                        </Grid.RowDefinitions>
+
+                        <!-- Row 0: Top Search / Path Bar -->
+                        <Border Grid.Row="0" Padding="10,8" CornerRadius="10"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                            <Grid ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <Button Grid.Column="0" Content="Browse Local…"
+                                        Click="BrowseButton_Click" VerticalAlignment="Center" />
+
+                                <TextBox Grid.Column="1" x:Name="PathTextBox"
+                                         PlaceholderText="Enter folder path or \\server\share\folder"
+                                         Text="{Binding NetworkPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         KeyDown="PathTextBox_KeyDown"
+                                         VerticalAlignment="Center" />
+
+                                <Button Grid.Column="2" Style="{StaticResource AccentButtonStyle}"
+                                        Command="{Binding ScanCommand}" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon Glyph="&#xE721;" FontSize="13" />
+                                        <TextBlock Text="Scan" FontWeight="SemiBold" />
+                                    </StackPanel>
+                                </Button>
+
+                                <Button Grid.Column="3" Content="Cancel"
+                                        Command="{Binding CancelCommand}"
+                                        Visibility="{Binding Summary.IsScanning, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}"
+                                        VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+
+                        <!-- Row 1: Error & Cancelled Banners -->
+                        <StackPanel Grid.Row="1" Spacing="6">
+                            <InfoBar x:Name="ErrorInfoBar"
+                                     Severity="Error" IsOpen="{Binding HasError}"
+                                     Title="{Binding ErrorMessage}" />
+
+                            <InfoBar Severity="Warning" IsOpen="{Binding Summary.ShowCancelledBanner}"
+                                     Title="Scan cancelled — results are partial." />
+                        </StackPanel>
+
+                        <!-- Row 2: Selected Folder Breadcrumb Bar -->
+                        <Border Grid.Row="2" Padding="12,7" CornerRadius="8"
+                                Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                                Visibility="{Binding Summary.HasScope, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <FontIcon Glyph="&#xE8B7;" FontSize="14" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+                                <TextBlock Text="{Binding Summary.ScopeText}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           FontSize="12"
+                                           TextTrimming="CharacterEllipsis"
+                                           ToolTipService.ToolTip="{Binding Summary.ScopeText}" />
                             </StackPanel>
+                        </Border>
 
-                            <!-- File detail table -->
-                            <Border Grid.Row="3" Padding="8" CornerRadius="8"
-                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                                <Grid RowSpacing="8">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="*" />
-                                    </Grid.RowDefinitions>
-                                    <TextBlock Text="Files in selected folder"
-                                               FontWeight="SemiBold" Margin="4,0,0,4" />
-                                    <ListView Grid.Row="1" ItemsSource="{Binding SelectedFolderFiles}"
-                                              SelectionMode="None">
-                                        <ListView.ItemTemplate>
-                                            <DataTemplate x:DataType="models:PdfFileRecord">
-<Grid Padding="4,2" ColumnSpacing="8" HorizontalAlignment="Stretch">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" MinWidth="80" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Text="{x:Bind Name}"
-                                                           TextTrimming="CharacterEllipsis"
-                                                           VerticalAlignment="Center"
-                                                           ToolTipService.ToolTip="{x:Bind FullPath}" />
-                                                <TextBlock Grid.Column="1"
-                                                           Text="{x:Bind PageCount, Mode=OneTime}"
-                                                           VerticalAlignment="Center" />
-                                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
-                                                        <Border Background="#FFB900" CornerRadius="8" Padding="6,1"
-                                                                Visibility="{x:Bind IsError, Mode=OneTime}">
-                                                            <TextBlock Text="Error" FontSize="11" Foreground="Black" />
-                                                        </Border>
-                                                        <Border Background="#107C10" CornerRadius="8" Padding="6,1"
-                                                                Visibility="{x:Bind IsOriginal, Mode=OneTime}">
-                                                            <TextBlock Text="Original" FontSize="11" Foreground="White" />
-                                                        </Border>
-                                                        <Border Background="{ThemeResource AccentFillColorDefaultBrush}"
-                                                                CornerRadius="8" Padding="6,1"
-                                                                Visibility="{x:Bind IsDuplicate, Mode=OneTime}">
-                                                            <TextBlock Text="Duplicate" FontSize="11" Foreground="White" />
-                                                        </Border>
-                                                        <Button Style="{StaticResource TagButtonStyle}" BorderThickness="1"
-                                                                BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
-                                                                Visibility="{x:Bind IsGrouped, Mode=OneTime}"
-                                                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                                                ToolTipService.ToolTip="Copy all paths in this duplicate group"
-                                                                Content="Copy Paths"
-                                                                Click="CopyPathsButton_Click" />
-                                                    </StackPanel>
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ListView.ItemTemplate>
-                                    </ListView>
+                        <!-- Row 3: 5 Responsive Summary Cards (Auto-stretches evenly across width) -->
+                        <Grid Grid.Row="3" x:Name="SummaryGrid" ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition x:Name="CardColTotalPages" Width="*" />
+                                <ColumnDefinition x:Name="CardColTotalFiles" Width="*" />
+                                <ColumnDefinition x:Name="CardColDuplicateFiles" Width="*" />
+                                <ColumnDefinition x:Name="CardColDuplicatePages" Width="*" />
+                                <ColumnDefinition x:Name="CardColUniquePages" Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Card 1: Total Pages (Soft Blue) -->
+                            <Border Grid.Column="0" Style="{StaticResource SummaryCardStyle}">
+                                <Grid ColumnSpacing="12" VerticalAlignment="Center">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Width="42" Height="42" CornerRadius="10" Background="#EBF3FC">
+                                        <FontIcon Glyph="&#xE8A5;" FontSize="20" Foreground="#2B78E4" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                        <TextBlock Text="Total Pages" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding Summary.TotalPagesText}" FontSize="22" FontWeight="Bold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- Card 2: Total Files (Soft Green) -->
+                            <Border Grid.Column="1" Style="{StaticResource SummaryCardStyle}">
+                                <Grid ColumnSpacing="12" VerticalAlignment="Center">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Width="42" Height="42" CornerRadius="10" Background="#E6F4EA">
+                                        <FontIcon Glyph="&#xE8B7;" FontSize="20" Foreground="#107C10" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                        <TextBlock Text="Total Files" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding Summary.TotalFilesText}" FontSize="22" FontWeight="Bold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- Card 3: Duplicate Files (Soft Purple) -->
+                            <Border Grid.Column="2" Style="{StaticResource SummaryCardStyle}"
+                                    Visibility="{Binding Settings.ShowDuplicateCount, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid ColumnSpacing="12" VerticalAlignment="Center">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Width="42" Height="42" CornerRadius="10" Background="#F3E8FD">
+                                        <FontIcon Glyph="&#xE8C8;" FontSize="20" Foreground="#8B5CF6" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                        <TextBlock Text="Duplicate Files" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding Summary.DuplicateFileCountText}" FontSize="22" FontWeight="Bold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- Card 4: Duplicate Pages (Soft Amber) -->
+                            <Border Grid.Column="3" Style="{StaticResource SummaryCardStyle}"
+                                    Visibility="{Binding Settings.ShowDuplicatePages, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid ColumnSpacing="12" VerticalAlignment="Center">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Width="42" Height="42" CornerRadius="10" Background="#FEF3C7">
+                                        <FontIcon Glyph="&#xE7C5;" FontSize="20" Foreground="#D97706" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                        <TextBlock Text="Duplicate Pages" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding Summary.DuplicatePagesText}" FontSize="22" FontWeight="Bold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- Card 5: Unique Pages (Soft Cyan) -->
+                            <Border Grid.Column="4" Style="{StaticResource SummaryCardStyle}"
+                                    Visibility="{Binding Settings.ShowUniquePageCount, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <Grid ColumnSpacing="12" VerticalAlignment="Center">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Width="42" Height="42" CornerRadius="10" Background="#E0F2FE">
+                                        <FontIcon Glyph="&#xE734;" FontSize="20" Foreground="#0D9488" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                        <TextBlock Text="Unique Pages" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding Summary.UniquePageTotalText}" FontSize="22" FontWeight="Bold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                    </StackPanel>
                                 </Grid>
                             </Border>
                         </Grid>
-                    </Grid>
-                </Grid>
-            </TabViewItem>
 
-            <!-- ======================= Box Count tab ======================= -->
-            <TabViewItem Header="Box Count">
-                <Grid Padding="4">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-
-                    <Border Grid.Row="0" Padding="12,8" CornerRadius="8"
-                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                        <StackPanel Spacing="8">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Button Content="Browse Local…" Click="BoxBrowseButton_Click" />
-                                <TextBox Width="380" PlaceholderText="Path or \\server\share\folder"
-                                         Text="{Binding Boxes.BoxPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                         KeyDown="BoxPathTextBox_KeyDown" />
-                                <Button Content="Scan" Style="{StaticResource AccentButtonStyle}"
-                                        Command="{Binding Boxes.ScanBoxesCommand}" />
-                                <Button Content="Cancel"
-                                        Command="{Binding Boxes.CancelBoxesCommand}"
-                                        Visibility="{Binding Boxes.IsScanning, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}" />
-                            </StackPanel>
-                            <TextBlock Text="{Binding Boxes.ScopeText, FallbackValue='(no folder selected)'}"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                       TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
-                    </Border>
-
-                    <InfoBar Grid.Row="1" Severity="Error" IsOpen="{Binding Boxes.HasError}"
-                             Title="{Binding Boxes.ErrorMessage}" Margin="12,8,12,0" />
-
-                    <Grid Grid.Row="2" Margin="12,8,12,12" RowSpacing="8">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
-
-                        <StackPanel Grid.Row="0" Spacing="4">
+                        <!-- Row 4: Status line & Progress bar -->
+                        <StackPanel Grid.Row="4" Spacing="4">
                             <ProgressBar IsIndeterminate="True"
-                                         Visibility="{Binding Boxes.IsScanning, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                         Visibility="{Binding Summary.IsScanning, Converter={StaticResource BooleanToVisibilityConverter}}"
                                          Maximum="100" />
                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                <TextBlock Text="{Binding Boxes.ScanningLabel}" FontWeight="SemiBold"
-                                           Visibility="{Binding Boxes.IsScanning, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                <TextBlock Text="{Binding Boxes.StatusText}"
-                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                <Button Content="Export to Excel…"
-                                        IsEnabled="{Binding Boxes.CanExport}"
-                                        Click="BoxExportButton_Click" />
+                                <TextBlock Text="{Binding Summary.ScanningLabel}" FontWeight="SemiBold"
+                                           Visibility="{Binding Summary.IsScanning, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                <TextBlock Text="{Binding Summary.ProgressText}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           FontSize="13" />
                             </StackPanel>
                         </StackPanel>
 
-                        <Border Grid.Row="1" Padding="8" CornerRadius="8"
+                        <!-- Row 5: Files in Selected Folder Table -->
+                        <Border Grid.Row="5" Padding="10" CornerRadius="10"
                                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
                             <Grid RowSpacing="8">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
                                     <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
-                                <Grid ColumnSpacing="8">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Box Number" FontWeight="SemiBold" />
-                                    <TextBlock Grid.Column="1" Text="Total PDF Files" FontWeight="SemiBold" Margin="0,0,16,0" />
-                                    <TextBlock Grid.Column="2" Text="Total Pages" FontWeight="SemiBold" Margin="0,0,16,0" />
-                                </Grid>
-                                <ListView Grid.Row="1" ItemsSource="{Binding Boxes.Results}" SelectionMode="None">
+
+                                <!-- Section Header -->
+                                <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="4,2,0,2">
+                                    <FontIcon Glyph="&#xE8B7;" FontSize="15" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+                                    <TextBlock Text="Files in selected folder" FontWeight="SemiBold" FontSize="14" />
+                                </StackPanel>
+
+                                <!-- Table Column Headers -->
+                                <Border Grid.Row="1" Padding="8,6" CornerRadius="6"
+                                        Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="80" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="File Name" FontWeight="SemiBold" FontSize="12"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock Grid.Column="1" Text="Actions" FontWeight="SemiBold" FontSize="12"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock Grid.Column="2" Text="Pages" FontWeight="SemiBold" FontSize="12"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   HorizontalAlignment="Right" Margin="0,0,8,0" />
+                                    </Grid>
+                                </Border>
+
+                                <!-- Files List -->
+                                <ListView Grid.Row="2" ItemsSource="{Binding SelectedFolderFiles}" SelectionMode="None">
                                     <ListView.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:BoxCountRow">
-                                            <Grid ColumnSpacing="8" Padding="4,2">
+                                        <DataTemplate x:DataType="models:PdfFileRecord">
+                                            <Grid Padding="4,4" ColumnSpacing="12" HorizontalAlignment="Stretch">
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="*" MinWidth="120" />
                                                     <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="80" />
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Text="{x:Bind Label}" />
-                                                <TextBlock Grid.Column="1" Text="{x:Bind CountText}" FontWeight="SemiBold"
-                                                           Margin="0,0,16,0" HorizontalAlignment="Right" />
-                                                <TextBlock Grid.Column="2" Text="{x:Bind PageCountText}" FontWeight="SemiBold"
-                                                           Margin="0,0,16,0" HorizontalAlignment="Right" />
+
+                                                <!-- File Name with Red PDF Document Icon -->
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                    <FontIcon Glyph="&#xE8A5;" FontSize="15" Foreground="#E54A4F" VerticalAlignment="Center" />
+                                                    <TextBlock Text="{x:Bind Name}" TextTrimming="CharacterEllipsis"
+                                                               VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind FullPath}" />
+                                                </StackPanel>
+
+                                                <!-- Actions / Badges / Copy Paths -->
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                                    <Border Background="#FFB900" CornerRadius="8" Padding="6,1"
+                                                            Visibility="{x:Bind IsError, Mode=OneTime}">
+                                                        <TextBlock Text="Error" FontSize="11" Foreground="Black" />
+                                                    </Border>
+                                                    <Border Background="#107C10" CornerRadius="8" Padding="6,1"
+                                                            Visibility="{x:Bind IsOriginal, Mode=OneTime}">
+                                                        <TextBlock Text="Original" FontSize="11" Foreground="White" />
+                                                    </Border>
+                                                    <Border Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                                            CornerRadius="8" Padding="6,1"
+                                                            Visibility="{x:Bind IsDuplicate, Mode=OneTime}">
+                                                        <TextBlock Text="Duplicate" FontSize="11" Foreground="White" />
+                                                    </Border>
+                                                    <Button Style="{StaticResource TagButtonStyle}" BorderThickness="1"
+                                                            BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+                                                            Visibility="{x:Bind IsGrouped, Mode=OneTime}"
+                                                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                                            ToolTipService.ToolTip="Copy all paths in this duplicate group"
+                                                            Content="Copy Paths"
+                                                            Click="CopyPathsButton_Click" />
+                                                </StackPanel>
+
+                                                <!-- Page count on the right -->
+                                                <TextBlock Grid.Column="2" Text="{x:Bind PageCount, Mode=OneTime}"
+                                                           FontWeight="SemiBold" HorizontalAlignment="Right"
+                                                           VerticalAlignment="Center" Margin="0,0,8,0" />
                                             </Grid>
                                         </DataTemplate>
                                     </ListView.ItemTemplate>
@@ -348,12 +388,145 @@
                 </Grid>
             </TabViewItem>
 
+            <!-- ======================= Box Count tab ======================= -->
+            <TabViewItem Header="Box Count">
+                <TabViewItem.IconSource>
+                    <FontIconSource Glyph="&#xF158;" />
+                </TabViewItem.IconSource>
+                <Grid Margin="12,6,12,12" RowSpacing="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Padding="10,8" CornerRadius="10"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <Button Grid.Column="0" Content="Browse Local…" Click="BoxBrowseButton_Click" VerticalAlignment="Center" />
+
+                            <TextBox Grid.Column="1" Width="380" PlaceholderText="Enter folder path or \\server\share\folder"
+                                     Text="{Binding Boxes.BoxPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     KeyDown="BoxPathTextBox_KeyDown" VerticalAlignment="Center" />
+
+                            <Button Grid.Column="2" Style="{StaticResource AccentButtonStyle}"
+                                    Command="{Binding Boxes.ScanBoxesCommand}" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <FontIcon Glyph="&#xE721;" FontSize="13" />
+                                    <TextBlock Text="Scan" FontWeight="SemiBold" />
+                                </StackPanel>
+                            </Button>
+
+                            <Button Grid.Column="3" Content="Cancel"
+                                    Command="{Binding Boxes.CancelBoxesCommand}"
+                                    Visibility="{Binding Boxes.IsScanning, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}"
+                                    VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
+
+                    <InfoBar Grid.Row="1" Severity="Error" IsOpen="{Binding Boxes.HasError}"
+                             Title="{Binding Boxes.ErrorMessage}" />
+
+                    <Grid Grid.Row="2" RowSpacing="10">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Spacing="4">
+                            <ProgressBar IsIndeterminate="True"
+                                         Visibility="{Binding Boxes.IsScanning, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                         Maximum="100" />
+                            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Boxes.ScanningLabel}" FontWeight="SemiBold"
+                                           Visibility="{Binding Boxes.IsScanning, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                <TextBlock Text="{Binding Boxes.StatusText}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontSize="13" />
+                                <Button Content="Export to Excel…"
+                                        IsEnabled="{Binding Boxes.CanExport}"
+                                        Click="BoxExportButton_Click" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <Border Grid.Row="1" Padding="10" CornerRadius="10"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <StackPanel>
+                                    <!-- Header row (shares the exact width of the rows below) -->
+                                    <Grid ColumnSpacing="0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="130" />
+                                            <ColumnDefinition Width="120" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" BorderThickness="1,0,1,1"
+                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                Background="{ThemeResource LayerFillColorDefaultBrush}" Padding="8,6">
+                                            <TextBlock Text="Box Number" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                        </Border>
+                                        <Border Grid.Column="1" BorderThickness="0,0,1,1"
+                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                Background="{ThemeResource LayerFillColorDefaultBrush}" Padding="8,6">
+                                            <TextBlock Text="Total PDF Files" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                        </Border>
+                                        <Border Grid.Column="2" BorderThickness="0,0,1,1"
+                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                Background="{ThemeResource LayerFillColorDefaultBrush}" Padding="8,6">
+                                            <TextBlock Text="Total Pages" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- Data rows with cell lines -->
+                                    <ItemsControl ItemsSource="{Binding Boxes.Results}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:BoxCountRow">
+                                                <Grid ColumnSpacing="0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="130" />
+                                                        <ColumnDefinition Width="120" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Border Grid.Column="0" BorderThickness="1,0,1,1"
+                                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Padding="8,4">
+                                                        <TextBlock Text="{x:Bind Label}" HorizontalAlignment="Center" />
+                                                    </Border>
+                                                    <Border Grid.Column="1" BorderThickness="0,0,1,1"
+                                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Padding="8,4">
+                                                        <TextBlock Text="{x:Bind CountText}" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                                    </Border>
+                                                    <Border Grid.Column="2" BorderThickness="0,0,1,1"
+                                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Padding="8,4">
+                                                        <TextBlock Text="{x:Bind PageCountText}" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                                    </Border>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </TabViewItem>
+
             <!-- ======================= Settings tab ======================= -->
             <TabViewItem Header="Settings">
-                <ScrollViewer Padding="16,8">
-                    <StackPanel Spacing="18" MaxWidth="640" HorizontalAlignment="Left">
+                <TabViewItem.IconSource>
+                    <FontIconSource Glyph="&#xE713;" />
+                </TabViewItem.IconSource>
+                <ScrollViewer Padding="16,12">
+                    <StackPanel Spacing="20" MaxWidth="640" HorizontalAlignment="Left">
 
-                        <StackPanel Spacing="4">
+                        <StackPanel Spacing="6">
                             <TextBlock Text="Theme" Style="{StaticResource SettingsSectionHeaderStyle}" />
                             <StackPanel Orientation="Horizontal" Spacing="24">
                                 <RadioButton x:Name="ThemeSystem" Content="System" GroupName="SettingsTheme" Tag="System" Checked="ThemeRadio_Checked" />
@@ -362,7 +535,7 @@
                             </StackPanel>
                         </StackPanel>
 
-                        <StackPanel Spacing="4">
+                        <StackPanel Spacing="6">
                             <TextBlock Text="Summary cards" Style="{StaticResource SettingsSectionHeaderStyle}" />
                             <ToggleSwitch Header="Show duplicate count"
                                           IsOn="{Binding Settings.ShowDuplicateCount, Mode=TwoWay}"
@@ -375,7 +548,7 @@
                                           OnContent="Duplicate pages appear as a card" OffContent="Duplicate pages hidden" />
                         </StackPanel>
 
-                        <StackPanel Spacing="4">
+                        <StackPanel Spacing="6">
                             <TextBlock Text="Duplicates" Style="{StaticResource SettingsSectionHeaderStyle}" />
                             <TextBlock Text="Which attributes must match for two PDFs to count as duplicates. Check any combination (1, 2, or 3). If none are checked, nothing is treated as a duplicate. Applies on the next scan."
                                        TextWrapping="Wrap"
@@ -385,7 +558,7 @@
                             <CheckBox Content="File size" IsChecked="{Binding Settings.MatchFileSize, Mode=TwoWay}" />
                         </StackPanel>
 
-                        <StackPanel Spacing="4">
+                        <StackPanel Spacing="6">
                             <TextBlock Text="Isolate duplicates" Style="{StaticResource SettingsSectionHeaderStyle}" />
                             <TextBlock Text="Moves the extra copies of identical PDFs into a “duplicates” folder that mirrors
                                         your folder structure, keeping one original per group. You can revert it afterwards."

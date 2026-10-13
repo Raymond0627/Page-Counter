@@ -25,13 +25,13 @@ public sealed partial class SettingsViewModel : ObservableObject
     }
 
     [ObservableProperty]
-    private bool _showDuplicateCount;
+    private bool _showDuplicateCount = true;
 
     [ObservableProperty]
-    private bool _showUniquePageCount;
+    private bool _showUniquePageCount = true;
 
     [ObservableProperty]
-    private bool _showDuplicatePages;
+    private bool _showDuplicatePages = true;
 
     [ObservableProperty]
     private bool _matchFileName = true;
