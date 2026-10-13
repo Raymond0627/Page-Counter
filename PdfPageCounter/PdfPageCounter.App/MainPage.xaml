@@ -280,6 +280,15 @@
                         </StackPanel>
 
                         <StackPanel Spacing="4">
+                            <TextBlock Text="Duplicates" Style="{StaticResource SettingsSectionHeaderStyle}" />
+                            <CheckBox Content="Ignore file name (match by page count + file size only)"
+                                      IsChecked="{Binding Settings.IgnoreFileName, Mode=TwoWay}" />
+                            <TextBlock Text="Unchecked: duplicates must match file name + page count + file size. Checked: renamed copies with the same page count and size also count. Applies on the next scan."
+                                       TextWrapping="Wrap"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
                             <TextBlock Text="Isolate duplicates" Style="{StaticResource SettingsSectionHeaderStyle}" />
                             <TextBlock Text="Moves the extra copies of identical PDFs into a “duplicates” folder that mirrors
                                         your folder structure, keeping one original per group. You can revert it afterwards."

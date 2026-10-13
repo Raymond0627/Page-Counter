@@ -4,16 +4,26 @@ namespace PdfPageCounter.Core.Services;
 
 /// <summary>
 /// Detects duplicate PDFs across the ENTIRE scanned tree (global scope).
-/// Two files are considered duplicates if they share the same filename
-/// (case-insensitive) AND the same page count AND the same size in bytes.
+/// By default two files are duplicates when they share the same filename
+/// (case-insensitive), page count, and size in bytes. When
+/// <see cref="IgnoreFileName"/> is set, the filename is disregarded and files
+/// match on page count + size alone.
 /// </summary>
 public sealed class DuplicateDetector
 {
-    // Key = (lowercase filename, page count, size). Case-insensitive by design.
+    // Key = (name key, page count, size). Name key is lowercase name, or "" when
+    // IgnoreFileName is set. Case-insensitive by design.
     private readonly Dictionary<(string, int, long), List<PdfFileRecord>> _groups = new();
     private readonly object _sync = new();
 
     private long _nextGroupId = 0;
+
+    /// <summary>
+    /// When true, files match on page count + size only (filename ignored).
+    /// When false (default), filename + page count + size must all match.
+    /// Set this before scanning; it takes effect on the next scan.
+    /// </summary>
+    public bool IgnoreFileName { get; set; }
 
     /// <summary>
     /// Registers a successfully-parsed file record for duplicate matching.
@@ -27,7 +37,8 @@ public sealed class DuplicateDetector
             return;
         }
 
-        var key = (record.Name.ToLowerInvariant(), record.PageCount, record.Size);
+        var nameKey = IgnoreFileName ? string.Empty : record.Name.ToLowerInvariant();
+        var key = (nameKey, record.PageCount, record.Size);
         lock (_sync)
         {
             if (!_groups.TryGetValue(key, out var list))

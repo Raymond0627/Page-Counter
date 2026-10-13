@@ -221,6 +221,70 @@ public class DuplicateDetectorTests
     }
 
     [Fact]
+    public void IgnoreFileName_MatchesDifferentNames_SamePagesAndSize()
+    {
+        var detector = new DuplicateDetector { IgnoreFileName = true };
+        var r1 = Rec("a.pdf", 10, @"C:\a.pdf");
+        r1.Size = 100;
+        var r2 = Rec("b.pdf", 10, @"C:\sub\b.pdf");
+        r2.Size = 100;
+        detector.Add(r1);
+        detector.Add(r2);
+        detector.Resolve();
+
+        Assert.True(r1.IsOriginal);
+        Assert.True(r2.IsDuplicate);
+        Assert.Equal(1, detector.DuplicateFileCount());
+    }
+
+    [Fact]
+    public void IgnoreFileName_DifferentSize_NotDuplicates()
+    {
+        var detector = new DuplicateDetector { IgnoreFileName = true };
+        var r1 = Rec("a.pdf", 10, @"C:\a.pdf");
+        r1.Size = 100;
+        var r2 = Rec("b.pdf", 10, @"C:\sub\b.pdf");
+        r2.Size = 200;
+        detector.Add(r1);
+        detector.Add(r2);
+        detector.Resolve();
+
+        Assert.False(r1.IsDuplicate);
+        Assert.False(r2.IsDuplicate);
+        Assert.Equal(0, detector.DuplicateFileCount());
+    }
+
+    [Fact]
+    public void IgnoreFileName_DifferentPages_NotDuplicates()
+    {
+        var detector = new DuplicateDetector { IgnoreFileName = true };
+        var r1 = Rec("a.pdf", 10, @"C:\a.pdf");
+        r1.Size = 100;
+        var r2 = Rec("b.pdf", 8, @"C:\sub\b.pdf");
+        r2.Size = 100;
+        detector.Add(r1);
+        detector.Add(r2);
+        detector.Resolve();
+
+        Assert.Equal(0, detector.DuplicateFileCount());
+    }
+
+    [Fact]
+    public void Default_RequiresSameName_DifferentNamesNotDuplicates()
+    {
+        var detector = new DuplicateDetector();
+        var r1 = Rec("a.pdf", 10, @"C:\a.pdf");
+        r1.Size = 100;
+        var r2 = Rec("b.pdf", 10, @"C:\sub\b.pdf");
+        r2.Size = 100;
+        detector.Add(r1);
+        detector.Add(r2);
+        detector.Resolve();
+
+        Assert.Equal(0, detector.DuplicateFileCount());
+    }
+
+    [Fact]
     public void Reset_ClearsState()
     {
         var detector = new DuplicateDetector();

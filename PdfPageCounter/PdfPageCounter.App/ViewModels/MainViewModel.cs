@@ -469,6 +469,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         ClearError();
         Summary.Reset();
+        _duplicateDetector.IgnoreFileName = Settings.IgnoreFileName;
         _duplicateDetector.Reset();
         SelectedFolderFiles.Clear();
         TreeRoots.Clear();
