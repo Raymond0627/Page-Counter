@@ -1,6 +1,8 @@
 using Microsoft.UI.Dispatching;
+using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using PdfPageCounter.Core.Models;
 using PdfPageCounter_App.Services;
@@ -197,6 +199,61 @@ public sealed partial class MainPage : Page
         {
             _viewModel.SelectedFolder = vm;
         }
+    }
+
+    // Only one Folder Number popup open at a time; clicking the same cell again closes it.
+    private Flyout? _openFolderFlyout;
+    private object? _openFolderButton;
+
+    private void FolderNumberButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement element || element.DataContext is not BoxCountRow row)
+        {
+            return;
+        }
+
+        if (_openFolderFlyout is not null)
+        {
+            var sameButton = ReferenceEquals(_openFolderButton, sender);
+            _openFolderFlyout.Hide();
+            _openFolderFlyout = null;
+            _openFolderButton = null;
+            if (sameButton)
+            {
+                return; // toggle closed
+            }
+        }
+
+        var panel = new StackPanel { Spacing = 3, MinWidth = 200 };
+        panel.Children.Add(new TextBlock
+        {
+            Text = row.IsNoBox ? "Folders (no box)" : "Folder Numbers",
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(0, 0, 0, 4),
+        });
+
+        foreach (var folder in row.Folders)
+        {
+            panel.Children.Add(new TextBlock { Text = folder.DisplayText, TextWrapping = TextWrapping.NoWrap });
+        }
+
+        var flyout = new Flyout
+        {
+            Placement = FlyoutPlacementMode.Bottom,
+            Content = new ScrollViewer { MaxHeight = 320, Content = panel },
+        };
+        flyout.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_openFolderFlyout, flyout))
+            {
+                _openFolderFlyout = null;
+                _openFolderButton = null;
+            }
+        };
+
+        _openFolderFlyout = flyout;
+        _openFolderButton = sender;
+        flyout.ShowAt(element);
     }
 
     private void CopyPathsButton_Click(object sender, RoutedEventArgs e)

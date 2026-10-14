@@ -18,9 +18,31 @@ public sealed class BoxCountRow
 
     public bool IsNoBox { get; init; }
 
+    /// <summary>Folder numbers (box rows) or relative folder paths (No box row).</summary>
+    public IReadOnlyList<FolderEntry> Folders { get; init; } = Array.Empty<FolderEntry>();
+
     public string CountText => Count.ToString("N0");
 
     public string PageCountText => PageCount.ToString("N0");
+
+    public bool HasFolders => Folders.Count > 0;
+
+    public bool HasNoFolders => Folders.Count == 0;
+
+    /// <summary>Collapsed cell text: the first folder plus a "+N" hint.</summary>
+    public string FolderSummaryText
+    {
+        get
+        {
+            if (Folders.Count == 0)
+            {
+                return "—";
+            }
+
+            var first = Folders[0].DisplayText;
+            return Folders.Count > 1 ? $"{first}  +{Folders.Count - 1}" : first;
+        }
+    }
 }
 
 /// <summary>
@@ -201,7 +223,13 @@ public sealed partial class BoxCountViewModel : ObservableObject
         Results.Clear();
         foreach (var box in result.Boxes)
         {
-            Results.Add(new BoxCountRow { Label = box.Label, Count = box.FileCount, PageCount = box.PageCount });
+            Results.Add(new BoxCountRow
+            {
+                Label = box.Label,
+                Count = box.FileCount,
+                PageCount = box.PageCount,
+                Folders = box.FolderNumbers.Select(n => new FolderEntry { Text = n }).ToList(),
+            });
         }
         Results.Add(new BoxCountRow
         {
@@ -209,6 +237,7 @@ public sealed partial class BoxCountViewModel : ObservableObject
             Count = result.UnboxedFileCount,
             PageCount = result.UnboxedPageCount,
             IsNoBox = true,
+            Folders = result.UnboxedFolders.ToList(),
         });
     }
 

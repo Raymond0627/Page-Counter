@@ -21,6 +21,10 @@ public sealed class BoxCounter
     private static readonly Regex BoxRegex =
         new(@"^\s*box[\s_\-]*(\d+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    // A "folder number" is digits with at least one dot, e.g. 013.01.03.
+    private static readonly Regex FolderNumberRegex =
+        new(@"^\d+(\.\d+)+$", RegexOptions.Compiled);
+
     private readonly IDirectoryLister _lister;
     private readonly PdfPageCounterService _pageCounter;
 
@@ -62,6 +66,10 @@ public sealed class BoxCounter
 
     public static string FormatLabel(int boxNumber) => $"Box {boxNumber}";
 
+    /// <summary>True when a folder name is a dotted folder number, e.g. "013.01.03".</summary>
+    public static bool IsFolderNumber(string? folderName) =>
+        !string.IsNullOrEmpty(folderName) && FolderNumberRegex.IsMatch(folderName);
+
     public async Task<BoxScanResult> ScanAsync(string rootPath, CancellationToken token)
     {
         var normalizedRoot = rootPath.TrimEnd('\\');
@@ -71,6 +79,10 @@ public sealed class BoxCounter
 
         var result = new BoxScanResult { RootPath = normalizedRoot };
         var boxTotals = new ConcurrentDictionary<int, (long Files, long Pages)>();
+        // Folder numbers per box number (deduped, case-insensitive).
+        var boxFolderNumbers = new ConcurrentDictionary<int, ConcurrentDictionary<string, byte>>();
+        // Unboxed files per containing folder (relative path, case-insensitive).
+        var unboxedFolders = new ConcurrentDictionary<string, long>(StringComparer.OrdinalIgnoreCase);
         long unboxedFiles = 0;
         long unboxedPages = 0;
         long totalFiles = 0;
@@ -117,9 +129,20 @@ public sealed class BoxCounter
                     continue;
                 }
 
+                var name = Path.GetFileName(sub);
+
+                // Record dotted folder numbers found under a box (any depth; the
+                // nearest box owns its subtree).
+                if (box.HasValue && IsFolderNumber(name))
+                {
+                    var set = boxFolderNumbers.GetOrAdd(box.Value,
+                        _ => new ConcurrentDictionary<string, byte>(StringComparer.OrdinalIgnoreCase));
+                    set.TryAdd(name, 0);
+                }
+
                 // Nearest box wins: a box folder overrides the inherited box for
                 // its whole subtree.
-                var childBox = TryParseBoxNumber(Path.GetFileName(sub)) ?? box;
+                var childBox = TryParseBoxNumber(name) ?? box;
                 Enqueue(sub, true, childBox);
             }
 
@@ -150,6 +173,33 @@ public sealed class BoxCounter
             {
                 Interlocked.Increment(ref unboxedFiles);
                 Interlocked.Add(ref unboxedPages, pageCount);
+
+                // Track the unboxed file's containing folder. When that folder is
+                // itself a folder number, show just the number (e.g. "033.02.04");
+                // otherwise show its path relative to the scan root.
+                var parentDir = Path.GetDirectoryName(file);
+                string key;
+                if (string.IsNullOrEmpty(parentDir))
+                {
+                    key = "(root)";
+                }
+                else
+                {
+                    var folderName = Path.GetFileName(parentDir);
+                    if (IsFolderNumber(folderName) && !string.Equals(parentDir, normalizedRoot, StringComparison.OrdinalIgnoreCase))
+                    {
+                        key = folderName;
+                    }
+                    else
+                    {
+                        key = Path.GetRelativePath(normalizedRoot, parentDir);
+                        if (string.IsNullOrEmpty(key) || key == ".")
+                        {
+                            key = "(root)";
+                        }
+                    }
+                }
+                unboxedFolders.AddOrUpdate(key, 1, (_, current) => current + 1);
             }
 
             Interlocked.Increment(ref totalFiles);
@@ -199,15 +249,28 @@ public sealed class BoxCounter
 
         foreach (var kvp in boxTotals)
         {
-            result.Boxes.Add(new BoxCount
+            var box = new BoxCount
             {
                 BoxNumber = kvp.Key,
                 Label = FormatLabel(kvp.Key),
                 FileCount = kvp.Value.Files,
                 PageCount = kvp.Value.Pages,
-            });
+            };
+
+            if (boxFolderNumbers.TryGetValue(kvp.Key, out var numbers))
+            {
+                box.FolderNumbers.AddRange(numbers.Keys.OrderBy(n => n, StringComparer.OrdinalIgnoreCase));
+            }
+
+            result.Boxes.Add(box);
         }
         result.Boxes.Sort((a, b) => a.BoxNumber.CompareTo(b.BoxNumber));
+
+        foreach (var kvp in unboxedFolders.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase))
+        {
+            result.UnboxedFolders.Add(new FolderEntry { Text = kvp.Key, Count = kvp.Value });
+        }
+
         result.UnboxedFileCount = Interlocked.Read(ref unboxedFiles);
         result.UnboxedPageCount = Interlocked.Read(ref unboxedPages);
         result.TotalFiles = Interlocked.Read(ref totalFiles);

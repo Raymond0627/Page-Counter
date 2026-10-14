@@ -163,4 +163,77 @@ public class BoxCounterTests : IDisposable
         Assert.Equal(1, result.TotalFiles);
         Assert.Equal(1, Assert.Single(result.Boxes).FileCount);
     }
+
+    [Theory]
+    [InlineData("013.01.03", true)]
+    [InlineData("13.1", true)]
+    [InlineData("1.2.3.4", true)]
+    [InlineData("002", false)]
+    [InlineData("backup.1", false)]
+    [InlineData("01.02.a", false)]
+    [InlineData("", false)]
+    public void IsFolderNumber_MatchesDottedOnly(string name, bool expected)
+    {
+        Assert.Equal(expected, BoxCounter.IsFolderNumber(name));
+    }
+
+    [Fact]
+    public async Task Scan_CollectsFolderNumbersUnderBox()
+    {
+        Pdf(@"Box 1\013.01.03\a.pdf");
+        Pdf(@"Box 1\sub\013.01.04\b.pdf");       // any depth under the box
+        Pdf(@"Box 1\002\c.pdf");                  // not dotted -> not a folder number
+        Pdf(@"admin2\Box 1\013.01.03\d.pdf");     // same box, different parent -> union
+
+        var result = await new BoxCounter().ScanAsync(_root, CancellationToken.None);
+
+        var box1 = Assert.Single(result.Boxes);
+        Assert.Equal(1, box1.BoxNumber);
+        Assert.Equal(new[] { "013.01.03", "013.01.04" }, box1.FolderNumbers);
+    }
+
+    [Fact]
+    public async Task Scan_TracksUnboxedFoldersWithCounts()
+    {
+        Pdf(@"misc\a.pdf");
+        Pdf(@"misc\b.pdf");
+        Pdf(@"013.01.03\c.pdf");
+        Pdf(@"root.pdf");
+
+        var result = await new BoxCounter().ScanAsync(_root, CancellationToken.None);
+
+        Assert.Empty(result.Boxes);
+        Assert.Equal(4, result.UnboxedFileCount);
+
+        var folders = result.UnboxedFolders.ToDictionary(f => f.Text, f => f.Count);
+        Assert.Equal(2, folders["misc"]);
+        Assert.Equal(1, folders["013.01.03"]);
+        Assert.Equal(1, folders["(root)"]);
+    }
+
+    [Fact]
+    public async Task Scan_UnboxedNonFolderNumber_ShowsRelativePath()
+    {
+        Pdf(@"PROJECT\SUBFOLDER\a.pdf");
+
+        var result = await new BoxCounter().ScanAsync(_root, CancellationToken.None);
+
+        var entry = Assert.Single(result.UnboxedFolders);
+        Assert.Equal("PROJECT\\SUBFOLDER", entry.Text);
+        Assert.Equal("PROJECT\\SUBFOLDER (1)", entry.DisplayText);
+    }
+
+    [Fact]
+    public async Task Scan_UnboxedFolderNumber_ShowsNumberOnly_AndMergesAcrossParents()
+    {
+        Pdf(@"PROJECT\013.01.03\a.pdf");
+        Pdf(@"OTHER\013.01.03\b.pdf");
+
+        var result = await new BoxCounter().ScanAsync(_root, CancellationToken.None);
+
+        var entry = Assert.Single(result.UnboxedFolders);
+        Assert.Equal("013.01.03", entry.Text);
+        Assert.Equal(2, entry.Count);
+        Assert.Equal("013.01.03 (2)", entry.DisplayText);
+    }
 }

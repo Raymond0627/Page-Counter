@@ -33,46 +33,51 @@ public sealed class BoxReportExporter
         // Header.
         const int headerRow = 4;
         sheet.Cell(headerRow, 1).Value = "Box Number";
-        sheet.Cell(headerRow, 2).Value = "Total PDF Files";
-        sheet.Cell(headerRow, 3).Value = "Total Pages";
+        sheet.Cell(headerRow, 2).Value = "Folder Numbers";
+        sheet.Cell(headerRow, 3).Value = "Total PDF Files";
+        sheet.Cell(headerRow, 4).Value = "Total Pages";
 
         // Rows: boxes (sorted) then "No box".
         int row = headerRow + 1;
         foreach (var box in result.Boxes)
         {
             sheet.Cell(row, 1).Value = box.Label;
-            sheet.Cell(row, 2).Value = box.FileCount;
-            sheet.Cell(row, 3).Value = box.PageCount;
+            sheet.Cell(row, 2).Value = string.Join(Environment.NewLine, box.FolderNumbers);
+            sheet.Cell(row, 3).Value = box.FileCount;
+            sheet.Cell(row, 4).Value = box.PageCount;
             row++;
         }
         sheet.Cell(row, 1).Value = NoBoxLabel;
-        sheet.Cell(row, 2).Value = result.UnboxedFileCount;
-        sheet.Cell(row, 3).Value = result.UnboxedPageCount;
+        sheet.Cell(row, 2).Value = string.Join(Environment.NewLine, result.UnboxedFolders.Select(f => f.DisplayText));
+        sheet.Cell(row, 3).Value = result.UnboxedFileCount;
+        sheet.Cell(row, 4).Value = result.UnboxedPageCount;
         int lastDataRow = row;
 
         // Themed table: banded rows, filter buttons, styled header.
-        var table = sheet.Range(headerRow, 1, lastDataRow, 3).CreateTable("BoxCounts");
+        var table = sheet.Range(headerRow, 1, lastDataRow, 4).CreateTable("BoxCounts");
         table.Theme = XLTableTheme.TableStyleMedium2;
         table.ShowAutoFilter = true;
 
         // Tally row (outside the table) with grand totals.
         int totalRow = lastDataRow + 2;
         sheet.Cell(totalRow, 1).Value = "TOTAL";
-        sheet.Cell(totalRow, 2).FormulaA1 = $"SUM(B{headerRow + 1}:B{lastDataRow})";
         sheet.Cell(totalRow, 3).FormulaA1 = $"SUM(C{headerRow + 1}:C{lastDataRow})";
-        var totalRange = sheet.Range(totalRow, 1, totalRow, 3);
+        sheet.Cell(totalRow, 4).FormulaA1 = $"SUM(D{headerRow + 1}:D{lastDataRow})";
+        var totalRange = sheet.Range(totalRow, 1, totalRow, 4);
         totalRange.Style.Font.Bold = true;
         totalRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#D9E1F2");
         totalRange.Style.Border.TopBorder = XLBorderStyleValues.Thin;
 
         // Number format + widths + frozen header.
-        var numberRange = sheet.Range(headerRow + 1, 2, totalRow, 3);
+        var numberRange = sheet.Range(headerRow + 1, 3, totalRow, 4);
         numberRange.Style.NumberFormat.Format = "#,##0";
         numberRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
         sheet.Column(1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
-        sheet.Column(1).Width = 22;
-        sheet.Column(2).Width = 18;
+        sheet.Column(1).Width = 16;
+        sheet.Column(2).Width = 46;
+        sheet.Column(2).Style.Alignment.WrapText = true;
         sheet.Column(3).Width = 16;
+        sheet.Column(4).Width = 14;
         sheet.SheetView.FreezeRows(headerRow);
 
         workbook.SaveAs(filePath);

@@ -10,6 +10,9 @@ public sealed class BoxCount
     public long FileCount { get; set; }
 
     public long PageCount { get; set; }
+
+    /// <summary>Distinct dotted "folder number" folders found under this box (sorted).</summary>
+    public List<string> FolderNumbers { get; } = new();
 }
 
 /// <summary>Result of a Box Count scan: per-box file and page totals plus any unboxed files.</summary>
@@ -25,6 +28,12 @@ public sealed class BoxScanResult
 
     /// <summary>Pages of the unboxed PDF files.</summary>
     public long UnboxedPageCount { get; set; }
+
+    /// <summary>
+    /// Containing folders (relative to the scan root) of the unboxed PDFs, each
+    /// with its file count — so unboxed files can be tracked to their source.
+    /// </summary>
+    public List<FolderEntry> UnboxedFolders { get; } = new();
 
     /// <summary>Every PDF file found (boxed + unboxed).</summary>
     public long TotalFiles { get; set; }

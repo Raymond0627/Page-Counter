@@ -464,6 +464,7 @@
                                     <!-- Header row (shares the exact width of the rows below) -->
                                     <Grid ColumnSpacing="0">
                                         <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="150" />
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="130" />
                                             <ColumnDefinition Width="120" />
@@ -476,9 +477,14 @@
                                         <Border Grid.Column="1" BorderThickness="0,0,1,1"
                                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                                 Background="{ThemeResource LayerFillColorDefaultBrush}" Padding="8,6">
-                                            <TextBlock Text="Total PDF Files" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                            <TextBlock Text="Folder Number" FontWeight="SemiBold" HorizontalAlignment="Center" />
                                         </Border>
                                         <Border Grid.Column="2" BorderThickness="0,0,1,1"
+                                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                                Background="{ThemeResource LayerFillColorDefaultBrush}" Padding="8,6">
+                                            <TextBlock Text="Total PDF Files" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                        </Border>
+                                        <Border Grid.Column="3" BorderThickness="0,0,1,1"
                                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                                 Background="{ThemeResource LayerFillColorDefaultBrush}" Padding="8,6">
                                             <TextBlock Text="Total Pages" FontWeight="SemiBold" HorizontalAlignment="Center" />
@@ -491,21 +497,47 @@
                                             <DataTemplate x:DataType="vm:BoxCountRow">
                                                 <Grid ColumnSpacing="0">
                                                     <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="150" />
                                                         <ColumnDefinition Width="*" />
                                                         <ColumnDefinition Width="130" />
                                                         <ColumnDefinition Width="120" />
                                                     </Grid.ColumnDefinitions>
+
                                                     <Border Grid.Column="0" BorderThickness="1,0,1,1"
                                                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Padding="8,4">
-                                                        <TextBlock Text="{x:Bind Label}" HorizontalAlignment="Center" />
+                                                        <TextBlock Text="{x:Bind Label}" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                                     </Border>
+
+                                                    <!-- Folder Number: clickable chip + flyout -->
                                                     <Border Grid.Column="1" BorderThickness="0,0,1,1"
-                                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Padding="8,4">
-                                                        <TextBlock Text="{x:Bind CountText}" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Padding="0">
+                                                        <Grid>
+                                                            <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                                                    Background="Transparent" BorderThickness="0" Padding="10,4"
+                                                                    Visibility="{x:Bind HasFolders, Mode=OneTime}"
+                                                                    Click="FolderNumberButton_Click"
+                                                                    ToolTipService.ToolTip="Click to view all">
+                                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                    <TextBlock Text="{x:Bind FolderSummaryText, Mode=OneTime}"
+                                                                               TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                                    <FontIcon Glyph="&#xE70D;" FontSize="10" VerticalAlignment="Center"
+                                                                              Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                                </StackPanel>
+                                                            </Button>
+                                                            <TextBlock Text="—" Margin="10,4"
+                                                                       VerticalAlignment="Center"
+                                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                                       Visibility="{x:Bind HasNoFolders, Mode=OneTime}" />
+                                                        </Grid>
                                                     </Border>
+
                                                     <Border Grid.Column="2" BorderThickness="0,0,1,1"
                                                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Padding="8,4">
-                                                        <TextBlock Text="{x:Bind PageCountText}" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                                        <TextBlock Text="{x:Bind CountText}" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    </Border>
+                                                    <Border Grid.Column="3" BorderThickness="0,0,1,1"
+                                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" Padding="8,4">
+                                                        <TextBlock Text="{x:Bind PageCountText}" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                                     </Border>
                                                 </Grid>
                                             </DataTemplate>
